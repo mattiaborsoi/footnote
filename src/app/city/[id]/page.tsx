@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Logo from "@/components/Logo";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { eq } from "drizzle-orm";
@@ -24,7 +25,7 @@ async function CityContent({ params }: { params: Promise<{ id: string }> }) {
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-8 px-6 py-12">
       <header className="flex flex-col gap-2">
-        <Link href="/" className="font-serif text-xl font-semibold">Footnote</Link>
+        <Logo size={24} />
         <h1 className="font-serif text-[36px] leading-tight tracking-tight">Ready-made walks in {city.name}</h1>
         <p className="text-muted">Built from the city&apos;s map and from what travel writers recommend. Open one, re-check it for your day, or tailor it to you.</p>
       </header>

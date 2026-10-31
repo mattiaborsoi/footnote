@@ -6,6 +6,7 @@ import { useCallback, useState } from "react";
 import RequestForm, { type FormState, type toRequest } from "@/components/request/RequestForm";
 import WaitPanel, { type StageState } from "@/components/request/WaitPanel";
 import { Icon } from "@/components/icons";
+import Logo from "@/components/Logo";
 import { readSse } from "@/lib/client/sse";
 import { sessionId, track } from "@/lib/client/events";
 
@@ -25,11 +26,12 @@ export default function Planner({ initial, tailorOf }: { initial?: Partial<FormS
   const [chosen, setChosen] = useState<string[]>([]);
   const [box, setBox] = useState<Box | null>(null);
   const [start, setStart] = useState<{ lat: number; lon: number } | null>(null);
+  const [snakes, setSnakes] = useState<{ lat: number; lon: number }[][]>([]);
   const [end, setEnd] = useState<{ lat: number; lon: number } | null>(null);
   const [startedAt, setStartedAt] = useState(0);
 
   const submit = useCallback(async (req: Req) => {
-    setBusy(true); setError(null); setStages([]); setFacts([]); setCands([]); setChosen([]); setBox(null); setStart(null); setEnd(null);
+    setBusy(true); setError(null); setStages([]); setFacts([]); setCands([]); setChosen([]); setBox(null); setStart(null); setEnd(null); setSnakes([]);
     const t0 = Date.now();
     setStartedAt(t0);
     try {
@@ -48,7 +50,8 @@ export default function Planner({ initial, tailorOf }: { initial?: Partial<FormS
             setCands((d.candidates as Cand[]) ?? []); setBox((d.bbox as Box) ?? null); setStart((d.start as { lat: number; lon: number }) ?? null); setEnd((d.end as { lat: number; lon: number } | null) ?? null);
             setFacts((d.sample as string[]) ?? []);
           }
-          if (s.stage === "choosing") setChosen((s.detail.stops as string[]) ?? []);
+          if (s.stage === "probing") setSnakes((s.detail.paths as { lat: number; lon: number }[][]) ?? []);
+          if (s.stage === "choosing") { setChosen((s.detail.stops as string[]) ?? []); setSnakes([]); }
         } else if (event === "walk") {
           const w = data as { id?: string | null; totalMinutes: number };
           track("walk.received", { ms: Date.now() - t0, totalMinutes: w.totalMinutes }, w.id ?? undefined);
@@ -72,7 +75,7 @@ export default function Planner({ initial, tailorOf }: { initial?: Partial<FormS
     <div className="flex min-h-dvh flex-col md:flex-row">
       <section className="flex flex-col gap-6 px-6 py-8 md:w-[520px] md:flex-none md:overflow-y-auto md:px-10 md:py-10 lg:w-[600px]">
         <header className="flex items-center justify-between">
-          <Link href="/" className="font-serif text-2xl font-semibold tracking-tight">Footnote</Link>
+          <Logo />
           {tailorOf ? <span className="text-[13px] text-muted">Tailoring a ready-made walk</span> : <Link href="/around" className="flex min-h-10 items-center gap-2 rounded-full border-2 border-line px-3 text-[14px] font-semibold text-ink"><Icon.locate width={16} height={16} />Around me</Link>}
         </header>
         {busy || error ? <WaitPanel stages={stages} facts={facts} startedAt={startedAt} error={error} /> : null}
@@ -81,8 +84,8 @@ export default function Planner({ initial, tailorOf }: { initial?: Partial<FormS
         </div>
         {error ? <button type="button" className="min-h-12 rounded-2xl border-2 border-line font-semibold" onClick={() => setError(null)}>Try again</button> : null}
       </section>
-      <aside className="relative min-h-[320px] flex-1 bg-map md:min-h-dvh" aria-label="Map">
-        <WalkMap start={start} end={end} candidates={cands} stops={chosenStops} searchBox={box} className="absolute inset-0" />
+      <aside className="relative min-h-[320px] flex-1 bg-map md:sticky md:top-0 md:h-dvh md:self-start" aria-label="Map">
+        <WalkMap start={start} end={end} candidates={cands} stops={chosenStops} searchBox={box} snakes={busy ? snakes : []} className="absolute inset-0" />
       </aside>
     </div>
   );
