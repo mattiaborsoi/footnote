@@ -1,9 +1,18 @@
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import { ID_PATTERN } from "@/lib/ids";
 import { loadWalk } from "@/lib/walks";
 
 /** A walk as a page: the shareable, bookmarkable record. The map and the full design come with the UI milestone. */
-export default async function WalkPage({ params }: { params: Promise<{ id: string }> }) {
+export default function WalkPage({ params }: { params: Promise<{ id: string }> }) {
+  return (
+    <Suspense fallback={<main className="p-10 text-neutral-500">Loading your walk…</main>}>
+      <WalkContent params={params} />
+    </Suspense>
+  );
+}
+
+async function WalkContent({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   if (!ID_PATTERN.test(id)) notFound();
   const walk = await loadWalk(id);
