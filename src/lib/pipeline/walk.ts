@@ -10,7 +10,7 @@ export type Walk = {
   summary: string;
   start: LatLng & { label: string };
   end: (LatLng & { label: string }) | null;
-  stops: { id: string; name: string; category: string; lat: number; lon: number; facts: string[]; story: string; why: string }[];
+  stops: { id: string; name: string; category: string; lat: number; lon: number; facts: string[]; hook: string; story: string; why: string }[];
   totalMinutes: number;
   walkingMinutes: number;
   distanceM: number;
@@ -19,6 +19,7 @@ export type Walk = {
   googleMapsUrl: string;
   gpx: string;
   candidatesConsidered: number;
+  language: string;
 };
 
 export type Providers = { geocoder: Geocoder; places: PlacesProvider; router: Router };
@@ -44,6 +45,7 @@ export async function buildWalk(raw: unknown, p: Providers, maxStops = 6): Promi
   const title = `A ${intent.minutes}-minute ${intent.interests.join(" and ")} walk`;
   const stops = fitted.stops.map((s) => ({
     id: s.id, name: s.name, category: s.category, lat: s.lat, lon: s.lon, facts: s.facts,
+    hook: s.facts[0] ?? "",
     story: s.facts.length ? s.facts.join(". ") + "." : "",
     why: `Matches your interest in ${s.category}.`,
   }));
@@ -57,5 +59,6 @@ export async function buildWalk(raw: unknown, p: Providers, maxStops = 6): Promi
     googleMapsUrl: googleMapsUrl(start, stops, end),
     gpx: gpx(title, stops, fitted.route.geometry),
     candidatesConsidered: ranked.length,
+    language: intent.language,
   };
 }
