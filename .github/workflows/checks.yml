@@ -1,0 +1,28 @@
+name: checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the dev image
+        run: docker build --target dev -t footnote-dev .
+      - name: Lint
+        run: docker run --rm -v "$PWD":/app -v /app/node_modules -v /app/.next footnote-dev pnpm lint
+      - name: Type-check (route types are generated first; the dev server does this implicitly)
+        run: docker run --rm -v "$PWD":/app -v /app/node_modules -v /app/.next footnote-dev sh -c "pnpm exec next typegen && pnpm exec tsc --noEmit"
+      - name: Production build
+        run: docker run --rm -v "$PWD":/app -v /app/node_modules -v /app/.next -e NEXT_TELEMETRY_DISABLED=1 footnote-dev pnpm build
