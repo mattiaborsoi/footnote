@@ -32,7 +32,7 @@ services:
       POSTGRES_DB: footnote
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
-      - db-data:/var/lib/postgresql/data
+      - ./data/postgres:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U footnote -d footnote"]
       interval: 5s
@@ -46,6 +46,3 @@ services:
     ports:
       - "8025:8025"
     restart: unless-stopped
-
-volumes:
-  db-data:
