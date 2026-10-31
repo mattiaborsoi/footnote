@@ -1,0 +1,53 @@
+name: review
+
+# Independent code review by an Opus agent that did not write the code.
+# Read-only tools; it can only post comments.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+concurrency:
+  group: review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  id-token: write
+
+jobs:
+  review:
+    if: github.event.pull_request.draft == false && github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          use_sticky_comment: true
+          prompt: |
+            You are the independent reviewer for pull request #${{ github.event.pull_request.number }} in ${{ github.repository }}.
+            You did not write this code. Read CLAUDE.md first, then the diff (`gh pr diff ${{ github.event.pull_request.number }}`) and the PR body.
+
+            Check, in this order:
+            1. Correctness: bugs, unhandled errors, wrong types, broken assumptions, anything that would fail at runtime.
+            2. The guiding rule "Claude curates, never invents": any path where model output could introduce places, facts or IDs that were not supplied, or bypass schema validation.
+            3. Privacy and secrets: personal information of any kind (names, emails, phone numbers, postcodes, addresses, coordinates outside tests/fixtures, real trips), secrets, or logging of API keys or user request text.
+            4. Notes discipline: if the change alters the plan, structure or a decision, CLAUDE.md must be updated in this PR (Architecture, Decisions, Status). A stale CLAUDE.md is blocking.
+            5. Simplicity and scope: unnecessary files, verbose code or comments, changes outside the PR's stated purpose.
+            6. UK compliance where relevant: data minimisation, consent, attribution of OpenStreetMap (ODbL) and Wikipedia (CC BY-SA), accessibility.
+
+            Post exactly one top-level comment with `gh pr comment ${{ github.event.pull_request.number }} --body "..."`, structured as:
+            **Review** — Verdict: APPROVE or REQUEST CHANGES. Then "Blocking:" as a numbered list with file:line, "Suggestions:" as a short list, and one line stating whether CLAUDE.md is consistent with the change.
+            Use inline comments for line-specific issues. Be terse: no praise, no restating the diff. If there is nothing to flag, say so in two lines.
+            Never edit files, never push.
+          claude_args: |
+            --model claude-opus-5-5
+            --max-turns 40
+            --allowedTools "Read,Grep,Glob,Bash(git diff:*),Bash(git log:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr comment:*),mcp__github_inline_comment__create_inline_comment"

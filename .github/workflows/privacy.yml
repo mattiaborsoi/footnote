@@ -1,0 +1,44 @@
+name: privacy
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  contents: read
+
+jobs:
+  privacy-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CI: "true"
+      # The denylist (names, places, handles) lives in a repository secret, never in the repo.
+      PRIVACY_DENYLIST: ${{ secrets.PRIVACY_DENYLIST }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Scan the PR's diff and commit messages
+        run: .githooks/privacy-scan --range "origin/${{ github.base_ref }}..HEAD"
+      - name: Scan the PR title and body
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: printf '%s\n\n%s\n' "$PR_TITLE" "$PR_BODY" | .githooks/privacy-scan --text
+      - name: PR title is a conventional subject
+        if: github.actor != 'dependabot[bot]'
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: printf '%s\n' "$PR_TITLE" > "$RUNNER_TEMP/title" && .githooks/privacy-scan --message "$RUNNER_TEMP/title"
+
+  gitleaks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
