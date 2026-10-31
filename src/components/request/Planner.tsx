@@ -2,7 +2,7 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import RequestForm, { type FormState, type toRequest } from "@/components/request/RequestForm";
 import WaitPanel, { type StageState } from "@/components/request/WaitPanel";
 import { Icon } from "@/components/icons";
@@ -69,7 +69,7 @@ export default function Planner({ initial, tailorOf }: { initial?: Partial<FormS
     }
   }, [router, tailorOf]);
 
-  const chosenStops = chosen.map((id, i) => { const c = cands.find((x) => x.id === id); return c ? { id, name: `Stop ${i + 1}`, category: "place", lat: c.lat, lon: c.lon } : null; }).filter((x): x is NonNullable<typeof x> => !!x);
+  const chosenStops = useMemo(() => chosen.map((id, i) => { const c = cands.find((x) => x.id === id); return c ? { id, name: `Stop ${i + 1}`, category: "place", lat: c.lat, lon: c.lon } : null; }).filter((x): x is NonNullable<typeof x> => !!x), [chosen, cands]);
 
   return (
     <div className="flex min-h-dvh flex-col md:flex-row">

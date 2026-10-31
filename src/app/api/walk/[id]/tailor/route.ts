@@ -9,5 +9,5 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const base = (await loadRequest(id)) as Record<string, unknown> | null;
   if (!base) return Response.json({ error: "not found" }, { status: 404 });
   const changes = ((await req.json().catch(() => ({}))) ?? {}) as Record<string, unknown>;
-  return streamWalk({ ...base, ...changes }, { fromWalkId: id });
+  return streamWalk({ ...base, ...changes, fresh: true }, { fromWalkId: id });
 }

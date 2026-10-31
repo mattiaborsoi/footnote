@@ -45,7 +45,9 @@ export default function WalkMap({ start, end, route = [], stops = [], candidates
       m.addSource("candidates", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       m.addLayer({ id: "candidates", type: "circle", source: "candidates", paint: { "circle-radius": 4, "circle-color": "#1e3a8a", "circle-opacity": 0.45 } });
       m.addSource("snakes", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
-      m.addLayer({ id: "snakes", type: "line", source: "snakes", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": ["get", "c"], "line-opacity": ["get", "o"], "line-width": 4 } });
+      m.addLayer({ id: "snakes-glow", type: "line", source: "snakes", filter: ["==", ["geometry-type"], "LineString"], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": ["get", "c"], "line-opacity": ["*", ["get", "o"], 0.35], "line-width": 11, "line-blur": 6 } });
+      m.addLayer({ id: "snakes-core", type: "line", source: "snakes", filter: ["==", ["geometry-type"], "LineString"], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": ["get", "c"], "line-opacity": ["get", "o"], "line-width": 4 } });
+      m.addLayer({ id: "snakes-head", type: "circle", source: "snakes", filter: ["==", ["geometry-type"], "Point"], paint: { "circle-color": ["get", "c"], "circle-radius": 6, "circle-stroke-color": "#ffffff", "circle-stroke-width": 2, "circle-opacity": ["get", "o"], "circle-stroke-opacity": ["get", "o"] } });
       m.addSource("spokes", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       m.addLayer({ id: "spokes", type: "line", source: "spokes", layout: { "line-cap": "round" }, paint: { "line-color": "#1e3a8a", "line-opacity": 0.55, "line-width": 3, "line-dasharray": [2, 2] } });
       m.addSource("route", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
@@ -96,6 +98,7 @@ export default function WalkMap({ start, end, route = [], stops = [], candidates
       });
 
       const pts = [...(start ? [start] : []), ...(end ? [end] : []), ...stops, ...route, ...candidates];
+      if (snakes.length && !route.length) return; // the trails own the camera while they play
       if (pts.length > 1) {
         const b = new LngLatBounds();
         pts.forEach((p) => b.extend([p.lon, p.lat]));
@@ -105,37 +108,77 @@ export default function WalkMap({ start, end, route = [], stops = [], candidates
     let cancelled = false;
     void loaded.current?.then(() => { if (!cancelled && map.current) apply(); });
     return () => { cancelled = true; };
-  }, [start, end, route, stops, candidates, searchBox, spokes, activeId, onStopClick, variant]);
+  }, [start, end, route, stops, candidates, searchBox, spokes, activeId, onStopClick, variant, snakes.length]);
 
   // MapLibre's own stylesheet sets position on its container and outranks utilities, so the positioning lives on a wrapper.
-  // The search animation: each probed route grows from the start along the streets over two seconds, holds, fades,
-  // staggered by a third of a second, and the set repeats while the stops are being chosen. Reduced motion shows them still.
+  // The search animation, in the manner of a trips layer: a bright head runs along each probed street route with a
+  // fading tail and a soft glow, four routes at a time to different candidates, each batch in fresh colours, until the
+  // stops are chosen. Reduced motion shows one still batch.
   useEffect(() => {
     const m = map.current;
     if (!m || !loaded.current) return;
     let frame = 0;
     let cancelled = false;
-    const colours = ["#1e3a8a", "#b5720a", "#4f8a5b", "#7c4d9b", "#0e7490", "#9d174d"];
+    const palettes = [["#ff4d6d", "#ffb703", "#06d6a0", "#8338ec"], ["#00b4d8", "#fb5607", "#c77dff", "#2ec4b6"], ["#ff006e", "#ffd60a", "#3a86ff", "#80ed99"]];
     void loaded.current.then(() => {
       if (cancelled) return;
       const src = m.getSource("snakes") as GeoJSONSource | undefined;
       if (!src) return;
       if (!snakes.length) { src.setData({ type: "FeatureCollection", features: [] }); return; }
+      // cumulative lengths per path, so the head moves at a steady pace whatever the point spacing
+      const paths = snakes.map((p) => {
+        const cum = [0];
+        for (let i = 1; i < p.length; i++) cum.push(cum[i - 1] + Math.hypot((p[i].lon - p[i - 1].lon) * Math.cos((p[i].lat * Math.PI) / 180), p[i].lat - p[i - 1].lat));
+        return { p, cum, total: cum[cum.length - 1] || 1 };
+      });
+      const at = (path: typeof paths[number], f: number) => {
+        const d = f * path.total;
+        let i = 1;
+        while (i < path.cum.length && path.cum[i] < d) i++;
+        if (i >= path.p.length) return path.p[path.p.length - 1];
+        const a = path.p[i - 1], b = path.p[i], seg = path.cum[i] - path.cum[i - 1] || 1, k = (d - path.cum[i - 1]) / seg;
+        return { lat: a.lat + (b.lat - a.lat) * k, lon: a.lon + (b.lon - a.lon) * k };
+      };
+      const slice = (path: typeof paths[number], from: number, to: number) => {
+        const pts = [at(path, from)];
+        for (let i = 0; i < path.p.length; i++) { const f = path.cum[i] / path.total; if (f > from && f < to) pts.push(path.p[i]); }
+        pts.push(at(path, to));
+        return pts;
+      };
+      // bring the camera to the probed routes: they are what is being shown now
+      const bounds = new LngLatBounds();
+      paths.forEach((path) => path.p.forEach((q) => bounds.extend([q.lon, q.lat])));
+      m.fitBounds(bounds, { padding: 70, maxZoom: 16, duration: 900 });
+      const perBatch = 4, run = 2600, fade = 500, stagger = 300, gap = 400;
+      const batchLen = run + fade + stagger * (perBatch - 1) + gap;
+      const batches = Math.max(1, Math.ceil(paths.length / perBatch));
       const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      const feature = (path: { lat: number; lon: number }[], i: number, o: number) => ({ type: "Feature" as const, properties: { c: colours[i % colours.length], o }, geometry: { type: "LineString" as const, coordinates: path.map((p) => [p.lon, p.lat]) } });
-      if (reduced) { src.setData({ type: "FeatureCollection", features: snakes.map((p, i) => feature(p, i, 0.5)) }); return; }
-      const grow = 2200, hold = 600, fade = 700, stagger = 350;
-      const period = grow + hold + fade + stagger * snakes.length + 400;
+      const line = (pts: { lat: number; lon: number }[], c: string, o: number) => ({ type: "Feature" as const, properties: { c, o }, geometry: { type: "LineString" as const, coordinates: pts.map((q) => [q.lon, q.lat]) } });
+      if (reduced) { src.setData({ type: "FeatureCollection", features: paths.slice(0, perBatch).map((path, i) => line(path.p, palettes[0][i % 4], 0.6)) }); return; }
       const t0 = performance.now();
       const tick = (now: number) => {
-        const t = (now - t0) % period;
-        const features = snakes.flatMap((path, i) => {
-          const local = t - i * stagger;
-          if (local < 0 || local > grow + hold + fade) return [];
-          const n = Math.max(2, Math.ceil(Math.min(1, local / grow) * path.length));
-          const o = local < grow + hold ? 0.85 : 0.85 * (1 - (local - grow - hold) / fade);
-          return [feature(path.slice(0, n), i, o)];
-        });
+        const elapsed = now - t0;
+        const b = Math.floor(elapsed / batchLen) % batches;
+        const t = elapsed % batchLen;
+        const palette = palettes[b % palettes.length];
+        const features: (ReturnType<typeof line> | { type: "Feature"; properties: { c: string; o: number }; geometry: { type: "Point"; coordinates: number[] } })[] = [];
+        for (let j = 0; j < perBatch; j++) {
+          const path = paths[(b * perBatch + j) % paths.length];
+          if (!path) continue;
+          const local = t - j * stagger;
+          if (local < 0 || local > run + fade) continue;
+          const head = Math.min(1, local / run);
+          const o = local <= run ? 1 : 1 - (local - run) / fade;
+          const tail = Math.max(0, head - 0.35);
+          const c = palette[j % palette.length];
+          // the tail in four steps of opacity, brightest at the head
+          for (let k = 0; k < 4; k++) {
+            const a = tail + ((head - tail) * k) / 4, bnd = tail + ((head - tail) * (k + 1)) / 4;
+            if (bnd > a) features.push(line(slice(path, a, bnd), c, o * (0.15 + 0.28 * k)));
+          }
+          const h = at(path, head);
+          features.push({ type: "Feature", properties: { c, o }, geometry: { type: "Point", coordinates: [h.lon, h.lat] } });
+        }
         src.setData({ type: "FeatureCollection", features });
         if (!cancelled) frame = requestAnimationFrame(tick);
       };
