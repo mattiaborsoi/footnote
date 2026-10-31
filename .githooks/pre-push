@@ -1,0 +1,11 @@
+#!/bin/sh
+# Refuses direct pushes to main: changes reach main only through a pull request.
+# Enabled per checkout with: git config core.hooksPath .githooks
+while read -r _local_ref _local_sha remote_ref _remote_sha; do
+  case "$remote_ref" in
+    refs/heads/main)
+      echo "pre-push: direct pushes to main are blocked. Open a pull request instead." >&2
+      exit 1 ;;
+  esac
+done
+exit 0
