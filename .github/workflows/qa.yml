@@ -37,7 +37,7 @@ jobs:
             2. Build the dev image: `docker build --target dev -t footnote-dev .`
             3. Run inside it, bind-mounting the checkout and masking node_modules and .next
                (`docker run --rm -v "$PWD":/app -v /app/node_modules -v /app/.next footnote-dev <command>`):
-               `pnpm lint`, `pnpm exec tsc --noEmit`, `pnpm build`, and `pnpm test` if package.json has a test script.
+               `pnpm lint`, `sh -c "pnpm exec next typegen && pnpm exec tsc --noEmit"`, `pnpm build`, and `pnpm test` if package.json has a test script.
             4. If tests/e2e exists, run it as CLAUDE.md describes.
             5. Reproduce what the PR body claims was tested wherever a command can: for example start the app
                (`docker run -d -p 3000:3000 ... pnpm dev --hostname 0.0.0.0`), wait for it, then curl the routes it touches.
