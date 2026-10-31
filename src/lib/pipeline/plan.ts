@@ -22,7 +22,8 @@ export async function planWalk(raw: unknown, p: Providers, llm: Llm, emit: (e: S
   const t = () => performance.now();
   let t0 = t();
   const intent = await interpret(raw, llm.transport, llm.models.interpret);
-  const start = await p.geocoder.geocode(intent.start);
+  const coords = intent.start.match(/^\s*(-?\d{1,2}(?:\.\d+)?)\s*,\s*(-?\d{1,3}(?:\.\d+)?)\s*$/);
+  const start = coords ? { lat: Number(coords[1]), lon: Number(coords[2]), label: "Your location" } : await p.geocoder.geocode(intent.start);
   if (!start) throw new Error(`Could not find "${intent.start}"`);
   const end = intent.end ? await p.geocoder.geocode(intent.end, start) : null;
   if (intent.end && !end) throw new Error(`Could not find "${intent.end}"`);

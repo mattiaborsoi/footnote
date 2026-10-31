@@ -11,6 +11,8 @@ export type MapProps = {
   stops?: MapStop[];
   candidates?: { id: string; lat: number; lon: number }[];
   searchBox?: { south: number; west: number; north: number; east: number } | null;
+  /** Straight dashed lines from one point to others: options, not a route. */
+  spokes?: [{ lat: number; lon: number }, { lat: number; lon: number }][];
   activeId?: string | null;
   onStopClick?: (id: string) => void;
   className?: string;
@@ -21,7 +23,7 @@ const STYLE = process.env.NEXT_PUBLIC_MAP_STYLE ?? "https://tiles.openfreemap.or
 if (typeof window !== "undefined") setWorkerUrl("/maplibre-gl-worker.mjs");
 
 /** The map from the brief: one ink route with a white casing, numbered white discs with interest halos, time pills per leg, a square start and a diamond end. */
-export default function WalkMap({ start, end, route = [], stops = [], candidates = [], searchBox, activeId, onStopClick, className }: MapProps) {
+export default function WalkMap({ start, end, route = [], stops = [], candidates = [], searchBox, spokes = [], activeId, onStopClick, className }: MapProps) {
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<MlMap | null>(null);
   const markers = useRef<Marker[]>([]);
@@ -37,6 +39,8 @@ export default function WalkMap({ start, end, route = [], stops = [], candidates
       m.addLayer({ id: "search-line", type: "line", source: "search", paint: { "line-color": "#1e3a8a", "line-opacity": 0.35, "line-width": 2, "line-dasharray": [3, 3] } });
       m.addSource("candidates", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       m.addLayer({ id: "candidates", type: "circle", source: "candidates", paint: { "circle-radius": 4, "circle-color": "#1e3a8a", "circle-opacity": 0.45 } });
+      m.addSource("spokes", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      m.addLayer({ id: "spokes", type: "line", source: "spokes", layout: { "line-cap": "round" }, paint: { "line-color": "#1e3a8a", "line-opacity": 0.55, "line-width": 3, "line-dasharray": [2, 2] } });
       m.addSource("route", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       m.addLayer({ id: "route-casing", type: "line", source: "route", layout: { "line-join": "round", "line-cap": "round" }, paint: { "line-color": "#ffffff", "line-width": 9 } });
       m.addLayer({ id: "route-line", type: "line", source: "route", layout: { "line-join": "round", "line-cap": "round" }, paint: { "line-color": "#1e3a8a", "line-width": 5 } });
@@ -52,6 +56,7 @@ export default function WalkMap({ start, end, route = [], stops = [], candidates
     const apply = () => {
       const src = (id: string) => m.getSource(id) as GeoJSONSource | undefined;
       src("route")?.setData({ type: "FeatureCollection", features: route.length ? [{ type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: route.map((p) => [p.lon, p.lat]) } }] : [] });
+      src("spokes")?.setData({ type: "FeatureCollection", features: spokes.map(([a, b]) => ({ type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: [[a.lon, a.lat], [b.lon, b.lat]] } })) });
       src("candidates")?.setData({ type: "FeatureCollection", features: candidates.map((c) => ({ type: "Feature", properties: { id: c.id }, geometry: { type: "Point", coordinates: [c.lon, c.lat] } })) });
       src("search")?.setData({ type: "FeatureCollection", features: searchBox ? [{ type: "Feature", properties: {}, geometry: { type: "Polygon", coordinates: [[[searchBox.west, searchBox.south], [searchBox.east, searchBox.south], [searchBox.east, searchBox.north], [searchBox.west, searchBox.north], [searchBox.west, searchBox.south]]] } }] : [] });
 
@@ -93,7 +98,7 @@ export default function WalkMap({ start, end, route = [], stops = [], candidates
     let cancelled = false;
     void loaded.current?.then(() => { if (!cancelled && map.current) apply(); });
     return () => { cancelled = true; };
-  }, [start, end, route, stops, candidates, searchBox, activeId, onStopClick]);
+  }, [start, end, route, stops, candidates, searchBox, spokes, activeId, onStopClick]);
 
   // MapLibre's own stylesheet sets position on its container and outranks utilities, so the positioning lives on a wrapper.
   return (

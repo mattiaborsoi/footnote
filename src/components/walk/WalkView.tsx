@@ -56,6 +56,7 @@ export default function WalkView({ initial }: { initial: StoredWalk }) {
           <a href={gpxHref} download={`${walk.title.replace(/[^\w]+/g, "-").toLowerCase()}.gpx`} onClick={() => track("walk.export", { kind: "gpx" }, walk.id)} className="flex min-h-12 items-center rounded-xl border-2 border-line px-4 font-semibold">GPX</a>
           <button type="button" onClick={copy} className="flex min-h-12 items-center rounded-xl border-2 border-line px-4 font-semibold">{copied ? "Link copied" : "Copy link"}</button>
           <Link href={`/tailor?of=${walk.id}`} className="flex min-h-12 items-center rounded-xl border-2 border-line px-4 font-semibold">Tailor it</Link>
+          <Link href={`/w/${walk.id}/footnoted`} onClick={() => track("walk.footnoted", {}, walk.id)} className="flex min-h-12 items-center rounded-xl border-2 border-line px-4 font-semibold">Footnoted page</Link>
         </div>
 
         <form className="flex flex-wrap items-center gap-2 rounded-xl bg-soft p-3 text-[14px]" onSubmit={(e) => { e.preventDefault(); void refresh(); }}>

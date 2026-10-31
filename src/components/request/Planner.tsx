@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import RequestForm, { type FormState, type toRequest } from "@/components/request/RequestForm";
 import WaitPanel, { type StageState } from "@/components/request/WaitPanel";
+import { Icon } from "@/components/icons";
 import { readSse } from "@/lib/client/sse";
 import { sessionId, track } from "@/lib/client/events";
 
@@ -72,7 +73,7 @@ export default function Planner({ initial, tailorOf }: { initial?: Partial<FormS
       <section className="flex flex-col gap-6 px-6 py-8 md:w-[520px] md:flex-none md:overflow-y-auto md:px-10 md:py-10 lg:w-[600px]">
         <header className="flex items-center justify-between">
           <Link href="/" className="font-serif text-2xl font-semibold tracking-tight">Footnote</Link>
-          <span className="text-[13px] text-muted">{tailorOf ? "Tailoring a ready-made walk" : "A walk designed around you"}</span>
+          {tailorOf ? <span className="text-[13px] text-muted">Tailoring a ready-made walk</span> : <Link href="/around" className="flex min-h-10 items-center gap-2 rounded-full border-2 border-line px-3 text-[14px] font-semibold text-ink"><Icon.locate width={16} height={16} />Around me</Link>}
         </header>
         {busy || error ? <WaitPanel stages={stages} facts={facts} startedAt={startedAt} error={error} /> : null}
         <div className={busy ? "hidden md:block md:opacity-50" : ""}>

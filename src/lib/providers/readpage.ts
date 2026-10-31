@@ -15,9 +15,18 @@ export function htmlToText(html: string, max = 8000): string {
   return text.slice(0, max);
 }
 
+/** The handful of entities that turn up in titles and snippets. */
+export function decodeEntities(s: string): string {
+  return s.replace(/&(#x?[0-9a-f]+|amp|lt|gt|quot|apos|nbsp|rsquo|lsquo|ldquo|rdquo|ndash|mdash|hellip);/gi, (m, code: string) => {
+    const named: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " ", rsquo: "'", lsquo: "'", ldquo: '"', rdquo: '"', ndash: "–", mdash: "—", hellip: "…" };
+    if (code[0] === "#") { const n = code[1].toLowerCase() === "x" ? parseInt(code.slice(2), 16) : parseInt(code.slice(1), 10); return Number.isFinite(n) ? String.fromCodePoint(n) : m; }
+    return named[code.toLowerCase()] ?? m;
+  });
+}
+
 export function pageTitle(html: string): string {
   const m = html.match(/<title[^>]*>([^<]{1,200})<\/title>/i);
-  return m ? m[1].replace(/\s+/g, " ").trim() : "";
+  return m ? decodeEntities(m[1]).replace(/\s+/g, " ").trim() : "";
 }
 
 export async function readPage(url: string): Promise<{ title: string; text: string } | null> {
