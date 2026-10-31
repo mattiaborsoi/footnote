@@ -13,7 +13,7 @@ export const CuratedStop = z.object({
 export const Curated = z.object({
   title: z.string().min(3).max(90),
   summary: z.string().min(10).max(320),
-  stops: z.array(CuratedStop).min(2).max(8),
+  stops: z.array(CuratedStop).min(2).max(12),
 });
 export type Curated = z.infer<typeof Curated>;
 
@@ -46,13 +46,15 @@ export function dropUnsupported(c: Curated): Curated {
 
 export async function curate(intent: Intent, cands: Candidate[], transport: Transport, model: string, maxStops = 6): Promise<{ curated: Curated; usage: { promptTokens: number; completionTokens: number } }> {
   const companions = intent.companions.filter((c) => c !== "me");
+  const target = intent.targetStops ?? maxStops;
+  const minStops = Math.max(3, target - 2);
   const { data, usage } = await askJson(
     transport,
     Curated,
     {
       model,
       maxTokens: 3000,
-      system: `You are Footnote's curator. You receive a walker's intent and a numbered list of real places, each with numbered facts. Choose between 3 and ${maxStops} stops that fit the intent and order them as a sensible walk from the start${intent.end ? " to the end" : " and back"}. For each stop write: "hook", one intriguing sentence of at most 90 characters, written as a lead not a label; "story", two or three short sentences; "why", one sentence tying it to the walker's interests${companions.length ? " or companions" : ""}. Use only the facts given and list the fact numbers you used in "factsUsed". A place with no facts, or whose facts you do not use, must not be chosen. Never invent names, dates, people or places. Prefer fewer good stops over padding. Also write a "title" (under 60 characters, no colon) and a two-sentence "summary". Write every text in the language "${intent.language}". JSON shape: {"title": "", "summary": "", "stops": [{"id": "", "hook": "", "story": "", "why": "", "factsUsed": [0]}]}`,
+      system: `You are Footnote's curator. You receive a walker's intent and a numbered list of real places, each with numbered facts. Choose between ${minStops} and ${Math.max(target, minStops)} stops that fit the intent; a ${intent.minutes}-minute walk wants about ${target} stops, so do not leave the walker trudging between few stops and order them as a sensible walk from the start${intent.end ? " to the end" : " and back"}. For each stop write: "hook", one intriguing sentence of at most 90 characters, written as a lead not a label; "story", two or three short sentences; "why", one sentence tying it to the walker's interests${companions.length ? " or companions" : ""}. Use only the facts given and list the fact numbers you used in "factsUsed". A place with no facts, or whose facts you do not use, must not be chosen. Never invent names, dates, people or places. Use the stop name as given (it is already in the walker's language where the data has one). Also write a "title" (under 60 characters, no colon) and a two-sentence "summary". Write every text in the language "${intent.language}". JSON shape: {"title": "", "summary": "", "stops": [{"id": "", "hook": "", "story": "", "why": "", "factsUsed": [0]}]}`,
       user: `Intent: ${intent.minutes} minutes, ${intent.pace} pace, from "${intent.start}"${intent.end ? ` to "${intent.end}"` : ", a loop"}; interests: ${intent.interests.join(", ")}${companions.length ? `; walking with: ${companions.join(", ")}` : ""}${intent.avoid.length ? `; avoid: ${intent.avoid.join(", ")}` : ""}${intent.mustInclude.length ? `; must include: ${intent.mustInclude.join(", ")}` : ""}${intent.vibe ? `; in their words: "${intent.vibe}"` : ""}.\n\nCandidates:\n${describeCandidates(cands)}`,
     },
     checkCurated(cands),
