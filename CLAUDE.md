@@ -7,7 +7,7 @@ A walk designed around you. A person describes the walk they are in the mood for
 Everything runs in containers. Nothing is installed on any host machine.
 
 - Start the test environment: `docker compose up -d --build` (add `-V` after dependency changes). App on :3002, Mailpit (catches all email) on :8025.
-- Checks: `docker compose exec -T app pnpm lint` and `docker compose exec -T app sh -c "pnpm exec next typegen && pnpm exec tsc --noEmit"` (typegen creates the route types tsc needs; the dev server does it implicitly).
+- Checks: `docker compose exec -T app pnpm test`, `docker compose exec -T app pnpm lint` and `docker compose exec -T app sh -c "pnpm exec next typegen && pnpm exec tsc --noEmit"` (typegen creates the route types tsc needs; the dev server does it implicitly).
 - Working loop: edit in the main checkout, sync the tree to the test machine (`rsync -a --delete --exclude .git --exclude node_modules --exclude .next --exclude .env --exclude data ./ <test-host>:<path>/`), the dev container reloads.
 - Secrets live only in `.env` (copy of `.env.example`, chmod 600, never committed). Container data lives in `./data/` (gitignored).
 - CI on every PR (`.github/workflows/`): `checks` builds the dev image and runs lint, type-check and a production build inside it; `privacy` runs `.githooks/privacy-scan` over the PR's diff, messages, title and body with the denylist from the `PRIVACY_DENYLIST` secret, plus gitleaks; `review` and `qa` run independent Opus agents on the Claude Code GitHub Action, authenticated by the `CLAUDE_CODE_OAUTH_TOKEN` secret (read-only reviewer; QA may run Docker and curl). Merge only when all are green. Dependabot opens weekly grouped update PRs.
@@ -23,9 +23,13 @@ Everything runs in containers. Nothing is installed on any host machine.
 
 ## Architecture (current)
 
-- `src/app/` — Next.js App Router; `api/health` for checks.
+- `src/app/` — Next.js App Router; `api/health` for checks; `api/walk/demo` builds a walk from query parameters without a model.
+- `src/lib/geo.ts` — distances, detour, ordering along an axis or around a centre, search bounding box.
+- `src/lib/providers/` — `types.ts` (Geocoder, PlacesProvider, Router, Candidate), `cache.ts` (TTL cache, per-provider throttle, User-Agent), `nominatim.ts`, `overpass.ts` (candidates with facts from tags), `osrm.ts` (foot profile). All dev-grade public services, swapped before going public.
+- `src/lib/pipeline/` — `intent.ts` (Intent schema, interest → OSM selectors, pace, dwell), `candidates.ts` (score, dedupe, pick and order), `fit.ts` (deterministic time-budget fitting), `export.ts` (Google Maps link with the nine-waypoint cap, GPX), `walk.ts` (orchestration).
+- `tests/unit/` with vitest; `tests/fixtures/city.ts` is the only place with coordinates (central Bath).
 - `compose.yml` + `Dockerfile` — dev target with the source bind-mounted; a production target comes with the cloud deployment.
-- Planned: `src/lib/pipeline/` (interpret → geocode → gather → curate → route and fit), `src/lib/providers/` (geocoder, places, stories, routing, tiles behind interfaces with caching and throttling), `src/lib/llm/` (the one module that talks to the model).
+- Planned: `src/lib/llm/` (the one module that talks to the model) with interpret and curate replacing the hard-coded intent and the score-based pick.
 
 ## Decisions
 
@@ -41,4 +45,4 @@ Everything runs in containers. Nothing is installed on any host machine.
 
 ## Status
 
-Milestone 0 (scaffold and pipeline) done: repo, scaffold, test environment, notes, privacy hooks, CI with reviewer and QA agents. Next: milestone 1, walks without AI. Before going public: squash the history and review this file for commercial detail.
+Milestone 0 (scaffold and pipeline) done: repo, scaffold, test environment, notes, privacy hooks, CI with reviewer and QA agents. Milestone 1 (walks without AI) done: a live 60-minute walk through the demo route returns real stops with facts, within budget, with a Google Maps link. Next: milestone 2, Claude in the loop (settings, LLM module, interpret and curate, progress streaming, guardrails). Before going public: squash the history and review this file for commercial detail.
