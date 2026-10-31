@@ -1,9 +1,12 @@
 import type { LatLng } from "../geo";
 
-export type GeocodeResult = LatLng & { label: string };
+export type GeocodeResult = LatLng & { label: string; bbox?: BBox; osmId?: string };
+export type BBox = { south: number; west: number; north: number; east: number };
 
 export interface Geocoder {
   geocode(query: string, near?: LatLng): Promise<GeocodeResult | null>;
+  /** Only results inside the box; used to pin a scouted name to a real place. */
+  geocodeWithin(query: string, bbox: BBox): Promise<GeocodeResult | null>;
 }
 
 /** A real place from open data. `id` is the provider's stable id (e.g. "osm:node/123"). */
@@ -13,6 +16,9 @@ export type Candidate = LatLng & {
   category: string;
   facts: string[];
   tags: Record<string, string>;
+  /** Extra score for places the scout found recommended on the web. */
+  boost?: number;
+  sources?: { title: string; url: string }[];
 };
 
 export interface PlacesProvider {

@@ -26,7 +26,7 @@ MARK = "privacy-ok"
 FIXTURE_DIRS = ("tests/fixtures/",)
 SKIP_FILES = ("pnpm-lock.yaml", "package-lock.json", "yarn.lock")
 SKIP_DIRS = ("drizzle/meta/",)  # generated migration metadata: ids and hashes only
-FORBIDDEN_PATHS = re.compile(r"^(\.env(\..*)?|\.local(/.*)?)$")
+FORBIDDEN_PATHS = re.compile(r"^(\.env(\.(?!example$).*)?|\.local(/.*)?)$")  # .env.example is the template and may be committed
 ALLOWED_EMAIL = re.compile(r"@(example\.(com|org|net)|([\w-]+\.)*github\.com|anthropic\.com)$", re.I)
 SUBJECT = re.compile(r"^(?:(?:fixup|squash)! )?(?:feat|fix|chore|docs|test|refactor|ci|perf|revert)(?:\([a-z0-9./-]+\))?!?: \S.{0,69}$")
 

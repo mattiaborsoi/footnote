@@ -32,6 +32,13 @@ export default async function WalkPage({ params }: { params: Promise<{ id: strin
               <p className="text-base">{s.hook}</p>
               <p className="text-sm text-neutral-700 dark:text-neutral-300">{s.story}</p>
               <p className="text-sm"><strong className="text-blue-900 dark:text-blue-300">Why it&apos;s here for you</strong> — {s.why}</p>
+              {s.sources?.length ? (
+                <p className="text-xs text-neutral-500">
+                  Recommended on {s.sources.map((src, j) => (
+                    <span key={src.url}>{j > 0 ? ", " : ""}<a className="underline" href={src.url} rel="nofollow noopener">{src.title}</a></span>
+                  ))}
+                </p>
+              ) : null}
             </div>
           </li>
         ))}
