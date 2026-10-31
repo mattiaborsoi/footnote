@@ -1,0 +1,162 @@
+#!/usr/bin/env python3
+"""Privacy and secret scan for staged changes, commit messages and commit ranges.
+
+Fails when added lines (or file names, or commit messages) contain personal
+information or secret-like tokens:
+  email, uk-phone, uk-postcode, coordinates (outside tests/fixtures/),
+  secret (known token formats), secret-assignment, denylist (your own terms),
+  plus commit-subject format and forbidden paths (.env, .local/).
+A deliberate exception is marked by the word privacy-ok on that line.
+
+  privacy-scan --staged          pre-commit: added lines in the index
+  privacy-scan --message FILE    commit-msg: subject format and content
+  privacy-scan --range A..B      CI: diff and messages of a commit range
+  privacy-scan --text            any text on stdin
+
+Denylist: .local/privacy-denylist.txt (one term per line, # comments) and the
+PRIVACY_DENYLIST environment variable (newline- or comma-separated). When the
+CI environment variable is set, matched text is not printed.
+"""
+import os
+import re
+import subprocess
+import sys
+
+MARK = "privacy-ok"
+FIXTURE_DIRS = ("tests/fixtures/",)
+SKIP_FILES = ("pnpm-lock.yaml", "package-lock.json", "yarn.lock")
+FORBIDDEN_PATHS = re.compile(r"^(\.env(\..*)?|\.local(/.*)?)$")
+ALLOWED_EMAIL = re.compile(r"@(example\.(com|org|net)|([\w-]+\.)*noreply\.github\.com|anthropic\.com)$", re.I)
+SUBJECT = re.compile(r"^(?:(?:fixup|squash)! )?(?:feat|fix|chore|docs|test|refactor|ci|perf|revert)(?:\([a-z0-9./-]+\))?!?: \S.{0,69}$")
+
+RULES = [
+    ("email", re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")),
+    ("uk-phone", re.compile(r"(?<![\w.])(?:\+44\s?\d{2,4}|\(?0\d{2,4}\)?)[\s-]?\d{3,4}[\s-]?\d{3,4}(?![\w.])")),
+    ("uk-postcode", re.compile(r"(?<![A-Z0-9])(?:GIR ?0AA|[A-PR-UWYZ][A-HK-Y]?\d[A-Z\d]? ?\d[ABD-HJLNP-UW-Z]{2})(?![A-Z0-9])")),
+    ("coordinates", re.compile(r"(?<![\d.-])-?(?:[1-8]?\d\.\d{4,}|90\.0+)\s*,\s*-?(?:1[0-7]\d|[1-9]?\d)\.\d{4,}(?![\d.])")),
+    ("secret", re.compile(
+        r"(?:sk-ant-[A-Za-z0-9_-]{20,}|sk-[A-Za-z0-9]{32,}|[sr]k_(?:live|test)_[A-Za-z0-9]{16,}"
+        r"|whsec_[A-Za-z0-9]{16,}|gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}"
+        r"|AKIA[0-9A-Z]{16}|xox[abpr]-[A-Za-z0-9-]{10,}|AIza[0-9A-Za-z_-]{35}|dop_v1_[a-f0-9]{64}"
+        r"|-----BEGIN [A-Z ]*PRIVATE KEY-----)")),
+    ("secret-assignment", re.compile(r"(?i)(?:api[_-]?key|secret|token|password|passwd)\s*[:=]\s*['\"][^'\"]{12,}['\"]")),
+]
+
+
+def git(*args):
+    return subprocess.run(["git", *args], capture_output=True, text=True, errors="replace").stdout
+
+
+ROOT = git("rev-parse", "--show-toplevel").strip() or "."
+QUIET = bool(os.environ.get("CI"))
+
+
+def load_denylist(mode):
+    terms = []
+    path = os.path.join(ROOT, ".local", "privacy-denylist.txt")
+    if os.path.exists(path):
+        with open(path, encoding="utf-8", errors="replace") as f:
+            terms += [l.strip() for l in f if l.strip() and not l.startswith("#")]
+    env = os.environ.get("PRIVACY_DENYLIST", "")
+    terms += [t.strip() for t in re.split(r"[\n,]", env) if t.strip()]
+    terms = [t for t in terms if len(t) >= 3]
+    if not terms and mode in ("--staged", "--range"):
+        print("privacy-scan: warning: no denylist (.local/privacy-denylist.txt or PRIVACY_DENYLIST); "
+              "names and places are not checked", file=sys.stderr)
+    return [t.lower() for t in terms]
+
+
+class Scanner:
+    def __init__(self, denylist):
+        self.denylist = denylist
+        self.findings = []
+
+    def report(self, where, rule, text):
+        self.findings.append((where, rule, text))
+
+    def scan_line(self, where, line, in_fixture=False):
+        if MARK in line:
+            return
+        for rule, rx in RULES:
+            if rule == "coordinates" and in_fixture:
+                continue
+            for m in rx.finditer(line):
+                if rule == "email" and ALLOWED_EMAIL.search(m.group(0)):
+                    continue
+                self.report(where, rule, m.group(0))
+        low = line.lower()
+        for term in self.denylist:
+            if term in low:
+                self.report(where, "denylist", term)
+
+    def scan_path(self, path):
+        if FORBIDDEN_PATHS.match(path):
+            self.report(path, "forbidden-path", path)
+        self.scan_line(path, path)
+
+    def scan_diff(self, diff):
+        path, lineno = None, 0
+        for raw in diff.splitlines():
+            if raw.startswith("+++ "):
+                path = None if raw.startswith("+++ /dev/null") else raw[6:] if raw.startswith("+++ b/") else raw[4:]
+                if path:
+                    self.scan_path(path)
+                continue
+            if raw.startswith("@@"):
+                m = re.search(r"\+(\d+)", raw)
+                lineno = int(m.group(1)) if m else 0
+                continue
+            if path is None or not raw.startswith("+") or raw.startswith("+++"):
+                continue
+            if os.path.basename(path) in SKIP_FILES:
+                lineno += 1
+                continue
+            in_fixture = path.startswith(FIXTURE_DIRS)
+            self.scan_line(f"{path}:{lineno}", raw[1:], in_fixture)
+            lineno += 1
+
+    def scan_message(self, message, where="commit message"):
+        lines = [l for l in message.splitlines() if not l.startswith("#")]
+        while lines and not lines[0].strip():
+            lines.pop(0)
+        subject = lines[0] if lines else ""
+        if not subject.startswith("Merge ") and not SUBJECT.match(subject):
+            self.report(where, "subject-format",
+                        "expected `type(scope)?: short description` with type feat|fix|chore|docs|test|refactor|ci|perf|revert, at most 72 characters")
+        for i, line in enumerate(lines, 1):
+            self.scan_line(f"{where}:{i}", line)
+
+
+def main(argv):
+    mode = argv[1] if len(argv) > 1 else "--help"
+    if mode in ("--help", "-h"):
+        print(__doc__.strip())
+        return 0
+    s = Scanner(load_denylist(mode))
+    if mode == "--staged":
+        s.scan_diff(git("diff", "--cached", "-U0", "--no-color", "--diff-filter=ACMR"))
+    elif mode == "--message":
+        with open(argv[2], encoding="utf-8", errors="replace") as f:
+            s.scan_message(f.read())
+    elif mode == "--range":
+        s.scan_diff(git("diff", argv[2], "-U0", "--no-color", "--diff-filter=ACMR"))
+        log = git("log", "--format=%H%n%B%x1e", argv[2])
+        for entry in filter(str.strip, log.split("\x1e")):
+            sha, _, body = entry.strip().partition("\n")
+            s.scan_message(body, where=f"commit {sha[:8]}")
+    elif mode == "--text":
+        for i, line in enumerate(sys.stdin.read().splitlines(), 1):
+            s.scan_line(f"stdin:{i}", line)
+    else:
+        print(__doc__.strip())
+        return 2
+    for where, rule, text in s.findings:
+        print(f"{where}: {rule}" + ("" if QUIET else f"  ->  {text}"))
+    if s.findings:
+        print(f"privacy-scan: {len(s.findings)} finding(s). Remove the content, or mark a deliberate exception with {MARK}.")
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))
