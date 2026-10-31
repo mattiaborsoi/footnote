@@ -9,6 +9,7 @@ import { PACE_MPS, SELECTORS } from "./intent";
 import { interpret } from "./interpret";
 import { arrivalTimes, localAsUtc, openAt, openState, TIMED_CATEGORIES } from "./hours";
 import { weatherFor } from "../providers/openmeteo";
+import { loadSpotsInBbox, mergeScouted } from "../scout/spots";
 import type { Providers, Walk } from "./walk";
 
 export type Stage = "understood" | "searching" | "choosing" | "routing";
@@ -34,7 +35,8 @@ export async function planWalk(raw: unknown, p: Providers, llm: Llm, emit: (e: S
   const selectors = [...new Set(intent.interests.flatMap((i) => SELECTORS[i]))];
   const startAt = localAsUtc(intent.when);
   const endAt = new Date(startAt.getTime() + intent.minutes * 60_000);
-  const [found, weather] = await Promise.all([p.places.search(bbox, selectors), weatherFor(start, startAt, endAt).catch(() => null)]);
+  const [mapped, scouted, weather] = await Promise.all([p.places.search(bbox, selectors), loadSpotsInBbox(bbox).catch(() => []), weatherFor(start, startAt, endAt).catch(() => null)]);
+  const found = mergeScouted(mapped, scouted);
   // Hours: a timed place closed for the whole window is out; what stays carries its hours as a fact the model can cite.
   const withHours = found.flatMap((c) => {
     const h = openState(c.tags.opening_hours, startAt, endAt);
@@ -43,7 +45,7 @@ export async function planWalk(raw: unknown, p: Providers, llm: Llm, emit: (e: S
     return [fact ? { ...c, facts: [...c.facts, fact] } : c];
   });
   const ranked = rank(withHours, start, end, corridorM, 40);
-  emit({ stage: "searching", ms: Math.round(t() - t0), detail: { found: found.length, closed: found.length - withHours.length, kept: ranked.length, weather: weather?.summary ?? null, candidates: ranked.map((c) => ({ id: c.id, lat: c.lat, lon: c.lon })) } });
+  emit({ stage: "searching", ms: Math.round(t() - t0), detail: { found: found.length, scouted: scouted.length, closed: found.length - withHours.length, kept: ranked.length, weather: weather?.summary ?? null, candidates: ranked.map((c) => ({ id: c.id, lat: c.lat, lon: c.lon })) } });
 
   t0 = t();
   const { curated, usage } = await curate({ ...intent, vibe: [intent.vibe, weather?.nudge ? `Weather: ${weather.summary}. ${weather.nudge}` : weather ? `Weather: ${weather.summary}.` : ""].filter(Boolean).join(" ") }, ranked, llm.transport, llm.models.curate);
@@ -56,7 +58,7 @@ export async function planWalk(raw: unknown, p: Providers, llm: Llm, emit: (e: S
   const arrivals = arrivalTimes(startAt, fitted.route, fitted.stops.length, intent.pace);
   const stops = fitted.stops.map((s, i) => {
     const h = openAt(s.tags.opening_hours, arrivals[i]);
-    return { id: s.id, name: s.name, category: s.category, lat: s.lat, lon: s.lon, facts: s.facts, hook: s.hook, story: s.story, why: s.why, arrival: arrivals[i].toISOString().slice(11, 16), open: h.state, hoursNote: h.note };
+    return { id: s.id, name: s.name, category: s.category, lat: s.lat, lon: s.lon, facts: s.facts, hook: s.hook, story: s.story, why: s.why, arrival: arrivals[i].toISOString().slice(11, 16), open: h.state, hoursNote: h.note, sources: s.sources ?? [] };
   });
   emit({ stage: "routing", ms: Math.round(t() - t0), detail: { totalMinutes: fitted.totalMinutes, dropped: chosen.length - stops.length } });
   logEvent("walk.built", { minutes: intent.minutes, interests: intent.interests, companions: intent.companions, language: intent.language, candidates: ranked.length, stops: stops.length, totalMinutes: fitted.totalMinutes, usage });

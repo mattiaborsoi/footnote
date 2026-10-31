@@ -1,4 +1,4 @@
-import { bigserial, index, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { bigserial, doublePrecision, index, integer, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
 /** A walk is a page: the request that made it and the result, under a short id in its link. */
 export const walks = pgTable("walks", {
@@ -36,3 +36,36 @@ export const feedback = pgTable("feedback", {
   contact: text("contact"),
   context: jsonb("context").notNull().default({}),
 });
+
+/** A scouted city: its map box and when the scout last ran. */
+export const cities = pgTable("cities", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  lat: doublePrecision("lat").notNull(),
+  lon: doublePrecision("lon").notNull(),
+  south: doublePrecision("south").notNull(),
+  west: doublePrecision("west").notNull(),
+  north: doublePrecision("north").notNull(),
+  east: doublePrecision("east").notNull(),
+  scoutedAt: timestamp("scouted_at", { withTimezone: true }),
+  sources: integer("sources").notNull().default(0),
+});
+
+/** A recommended spot found on the web and matched to a real map place: facts and a link, never the author's text. */
+export const spots = pgTable(
+  "spots",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    cityId: text("city_id").notNull().references(() => cities.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    category: text("category").notNull(),
+    lat: doublePrecision("lat").notNull(),
+    lon: doublePrecision("lon").notNull(),
+    osmId: text("osm_id"),
+    reason: text("reason").notNull(),
+    sources: jsonb("sources").notNull().default([]),
+    mentions: integer("mentions").notNull().default(1),
+    scoutedAt: timestamp("scouted_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [index("spots_city_idx").on(t.cityId), index("spots_lat_lon_idx").on(t.lat, t.lon)],
+);
