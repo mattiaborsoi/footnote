@@ -25,6 +25,7 @@ import sys
 MARK = "privacy-ok"
 FIXTURE_DIRS = ("tests/fixtures/",)
 SKIP_FILES = ("pnpm-lock.yaml", "package-lock.json", "yarn.lock")
+SKIP_DIRS = ("drizzle/meta/",)  # generated migration metadata: ids and hashes only
 FORBIDDEN_PATHS = re.compile(r"^(\.env(\..*)?|\.local(/.*)?)$")
 ALLOWED_EMAIL = re.compile(r"@(example\.(com|org|net)|([\w-]+\.)*github\.com|anthropic\.com)$", re.I)
 SUBJECT = re.compile(r"^(?:(?:fixup|squash)! )?(?:feat|fix|chore|docs|test|refactor|ci|perf|revert)(?:\([a-z0-9./-]+\))?!?: \S.{0,69}$")
@@ -83,6 +84,8 @@ class Scanner:
             for m in rx.finditer(line):
                 if rule == "email" and ALLOWED_EMAIL.search(m.group(0)):
                     continue
+                if rule == "uk-phone" and len(set(re.sub(r"\D", "", m.group(0)))) == 1:
+                    continue  # 000000000000 is a placeholder, not a number
                 self.report(where, rule, m.group(0))
         low = line.lower()
         for term in self.denylist:
@@ -108,7 +111,7 @@ class Scanner:
                 continue
             if path is None or not raw.startswith("+") or raw.startswith("+++"):
                 continue
-            if os.path.basename(path) in SKIP_FILES:
+            if os.path.basename(path) in SKIP_FILES or path.startswith(SKIP_DIRS):
                 lineno += 1
                 continue
             in_fixture = path.startswith(FIXTURE_DIRS)
