@@ -9,6 +9,7 @@ const fraunces = Fraunces({ variable: "--font-fraunces", subsets: ["latin"], axe
 export const metadata: Metadata = {
   title: { default: "Footnote", template: "%s · Footnote" },
   description: "A walk designed around you.",
+  icons: { icon: "/icon.svg" },
 };
 export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#ffffff" };
 

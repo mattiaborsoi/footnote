@@ -18,6 +18,8 @@ export type MapProps = {
   className?: string;
   /** "print": a thin route, small discs, no controls, no pills, canvas kept for printing. */
   variant?: "full" | "print";
+  /** While the walk is being chosen: routes from the start to the best candidates, each drawn along the streets and faded, staggered, on a loop. */
+  snakes?: { lat: number; lon: number }[][];
 };
 
 const STYLE = process.env.NEXT_PUBLIC_MAP_STYLE ?? "https://tiles.openfreemap.org/styles/positron";
@@ -25,7 +27,7 @@ const STYLE = process.env.NEXT_PUBLIC_MAP_STYLE ?? "https://tiles.openfreemap.or
 if (typeof window !== "undefined") setWorkerUrl("/maplibre-gl-worker.mjs");
 
 /** The map from the brief: one ink route with a white casing, numbered white discs with interest halos, time pills per leg, a square start and a diamond end. */
-export default function WalkMap({ start, end, route = [], stops = [], candidates = [], searchBox, spokes = [], activeId, onStopClick, className, variant = "full" }: MapProps) {
+export default function WalkMap({ start, end, route = [], stops = [], candidates = [], searchBox, spokes = [], activeId, onStopClick, className, variant = "full", snakes = [] }: MapProps) {
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<MlMap | null>(null);
   const markers = useRef<Marker[]>([]);
@@ -42,6 +44,8 @@ export default function WalkMap({ start, end, route = [], stops = [], candidates
       m.addLayer({ id: "search-line", type: "line", source: "search", paint: { "line-color": "#1e3a8a", "line-opacity": 0.35, "line-width": 2, "line-dasharray": [3, 3] } });
       m.addSource("candidates", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       m.addLayer({ id: "candidates", type: "circle", source: "candidates", paint: { "circle-radius": 4, "circle-color": "#1e3a8a", "circle-opacity": 0.45 } });
+      m.addSource("snakes", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      m.addLayer({ id: "snakes", type: "line", source: "snakes", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": ["get", "c"], "line-opacity": ["get", "o"], "line-width": 4 } });
       m.addSource("spokes", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       m.addLayer({ id: "spokes", type: "line", source: "spokes", layout: { "line-cap": "round" }, paint: { "line-color": "#1e3a8a", "line-opacity": 0.55, "line-width": 3, "line-dasharray": [2, 2] } });
       m.addSource("route", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
@@ -104,6 +108,42 @@ export default function WalkMap({ start, end, route = [], stops = [], candidates
   }, [start, end, route, stops, candidates, searchBox, spokes, activeId, onStopClick, variant]);
 
   // MapLibre's own stylesheet sets position on its container and outranks utilities, so the positioning lives on a wrapper.
+  // The search animation: each probed route grows from the start along the streets over two seconds, holds, fades,
+  // staggered by a third of a second, and the set repeats while the stops are being chosen. Reduced motion shows them still.
+  useEffect(() => {
+    const m = map.current;
+    if (!m || !loaded.current) return;
+    let frame = 0;
+    let cancelled = false;
+    const colours = ["#1e3a8a", "#b5720a", "#4f8a5b", "#7c4d9b", "#0e7490", "#9d174d"];
+    void loaded.current.then(() => {
+      if (cancelled) return;
+      const src = m.getSource("snakes") as GeoJSONSource | undefined;
+      if (!src) return;
+      if (!snakes.length) { src.setData({ type: "FeatureCollection", features: [] }); return; }
+      const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const feature = (path: { lat: number; lon: number }[], i: number, o: number) => ({ type: "Feature" as const, properties: { c: colours[i % colours.length], o }, geometry: { type: "LineString" as const, coordinates: path.map((p) => [p.lon, p.lat]) } });
+      if (reduced) { src.setData({ type: "FeatureCollection", features: snakes.map((p, i) => feature(p, i, 0.5)) }); return; }
+      const grow = 2200, hold = 600, fade = 700, stagger = 350;
+      const period = grow + hold + fade + stagger * snakes.length + 400;
+      const t0 = performance.now();
+      const tick = (now: number) => {
+        const t = (now - t0) % period;
+        const features = snakes.flatMap((path, i) => {
+          const local = t - i * stagger;
+          if (local < 0 || local > grow + hold + fade) return [];
+          const n = Math.max(2, Math.ceil(Math.min(1, local / grow) * path.length));
+          const o = local < grow + hold ? 0.85 : 0.85 * (1 - (local - grow - hold) / fade);
+          return [feature(path.slice(0, n), i, o)];
+        });
+        src.setData({ type: "FeatureCollection", features });
+        if (!cancelled) frame = requestAnimationFrame(tick);
+      };
+      frame = requestAnimationFrame(tick);
+    });
+    return () => { cancelled = true; cancelAnimationFrame(frame); };
+  }, [snakes]);
+
   return (
     <div className={className ?? "h-full w-full"} role="region" aria-label="Map">
       <div ref={el} className="h-full w-full" />
