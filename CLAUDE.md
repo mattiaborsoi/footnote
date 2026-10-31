@@ -29,6 +29,7 @@ Everything runs in containers. Nothing is installed on any host machine.
 
 ## Decisions
 
+- 2026-10-31 — Dependabot handles minors and patches only; majors are moved by hand (Node to the next LTS, and TypeScript, ESLint and Next together, since typescript-eslint lags TypeScript majors). Node 25+ ships no corepack, so pnpm is installed with npm at the version pinned in package.json. Dependabot PRs are merged only when checks are green.
 - 2026-10-31 — Repo is private under GitHub Free, which has no branch protection: a pre-push hook blocks pushes to main until the repo goes public.
 - 2026-10-31 — Everything in containers. Test environment on a home server, production on a cloud VM with its own LiteLLM. The app only ever sees an OpenAI-compatible base URL.
 - 2026-10-30 — Open core: the app is public (licence to decide before release, AGPL favoured); curated city data, billing and deployment config stay private.
