@@ -1,4 +1,4 @@
-import { bigserial, doublePrecision, index, integer, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { bigserial, doublePrecision, index, integer, jsonb, pgTable, primaryKey, text, timestamp } from "drizzle-orm/pg-core";
 
 /** A walk is a page: the request that made it and the result, under a short id in its link. */
 export const walks = pgTable("walks", {
@@ -9,6 +9,8 @@ export const walks = pgTable("walks", {
   title: text("title").notNull(),
   request: jsonb("request").notNull(),
   walk: jsonb("walk").notNull(),
+  cityId: text("city_id"),
+  preset: text("preset"),
 });
 
 /** Product events: what people asked, how long each stage took, what they tapped, what failed. No cookies; ids come from the client. */
@@ -49,7 +51,26 @@ export const cities = pgTable("cities", {
   east: doublePrecision("east").notNull(),
   scoutedAt: timestamp("scouted_at", { withTimezone: true }),
   sources: integer("sources").notNull().default(0),
+  placesAt: timestamp("places_at", { withTimezone: true }),
+  status: text("status").notNull().default("pending"),
 });
+
+/** The city's map places, fetched once for the whole core and refreshed weekly, so a walk never waits on the public places server. */
+export const places = pgTable(
+  "places",
+  {
+    id: text("id").notNull(),
+    cityId: text("city_id").notNull().references(() => cities.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    category: text("category").notNull(),
+    lat: doublePrecision("lat").notNull(),
+    lon: doublePrecision("lon").notNull(),
+    tags: jsonb("tags").notNull().default({}),
+    facts: jsonb("facts").notNull().default([]),
+    fetchedAt: timestamp("fetched_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.cityId, t.id] }), index("places_lat_lon_idx").on(t.lat, t.lon)],
+);
 
 /** A recommended spot found on the web and matched to a real map place: facts and a link, never the author's text. */
 export const spots = pgTable(

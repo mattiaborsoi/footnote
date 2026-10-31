@@ -17,6 +17,7 @@ export type Walk = {
   distanceM: number;
   steps: number;
   route: LatLng[];
+  legs?: { durationS: number }[];
   googleMapsUrl: string;
   gpx: string;
   candidatesConsidered: number;

@@ -10,6 +10,7 @@ import { interpret } from "./interpret";
 import { arrivalTimes, localAsUtc, openAt, openState, TIMED_CATEGORIES } from "./hours";
 import { weatherFor } from "../providers/openmeteo";
 import { loadSpotsInBbox, mergeScouted } from "../scout/spots";
+import { cachedPlacesFor, registerCity } from "../scout/places";
 import type { Providers, Walk } from "./walk";
 
 export type Stage = "understood" | "searching" | "choosing" | "routing";
@@ -35,7 +36,13 @@ export async function planWalk(raw: unknown, p: Providers, llm: Llm, emit: (e: S
   const selectors = [...new Set(intent.interests.flatMap((i) => SELECTORS[i]))];
   const startAt = localAsUtc(intent.when);
   const endAt = new Date(startAt.getTime() + intent.minutes * 60_000);
-  const [mapped, scouted, weather] = await Promise.all([p.places.search(bbox, selectors), loadSpotsInBbox(bbox).catch(() => []), weatherFor(start, startAt, endAt).catch(() => null)]);
+  const cachedPlaces = await cachedPlacesFor(bbox, start, intent.interests).catch(() => null);
+  const [mapped, scouted, weather] = await Promise.all([
+    cachedPlaces ?? p.places.search(bbox, selectors),
+    loadSpotsInBbox(bbox).catch(() => []),
+    weatherFor(start, startAt, endAt).catch(() => null),
+  ]);
+  if (!cachedPlaces && start.city) void registerCity(start.city, p.geocoder).catch(() => null);
   const found = mergeScouted(mapped, scouted);
   // Hours: a timed place closed for the whole window is out; what stays carries its hours as a fact the model can cite.
   const withHours = found.flatMap((c) => {
@@ -45,7 +52,7 @@ export async function planWalk(raw: unknown, p: Providers, llm: Llm, emit: (e: S
     return [fact ? { ...c, facts: [...c.facts, fact] } : c];
   });
   const ranked = rank(withHours, start, end, corridorM, 40);
-  emit({ stage: "searching", ms: Math.round(t() - t0), detail: { found: found.length, scouted: scouted.length, closed: found.length - withHours.length, kept: ranked.length, weather: weather?.summary ?? null, candidates: ranked.map((c) => ({ id: c.id, lat: c.lat, lon: c.lon })) } });
+  emit({ stage: "searching", ms: Math.round(t() - t0), detail: { found: found.length, cached: !!cachedPlaces, scouted: scouted.length, closed: found.length - withHours.length, kept: ranked.length, weather: weather?.summary ?? null, candidates: ranked.map((c) => ({ id: c.id, lat: c.lat, lon: c.lon })) } });
 
   t0 = t();
   const { curated, usage } = await curate({ ...intent, vibe: [intent.vibe, weather?.nudge ? `Weather: ${weather.summary}. ${weather.nudge}` : weather ? `Weather: ${weather.summary}.` : ""].filter(Boolean).join(" ") }, ranked, llm.transport, llm.models.curate);
@@ -70,6 +77,7 @@ export async function planWalk(raw: unknown, p: Providers, llm: Llm, emit: (e: S
     totalMinutes: fitted.totalMinutes, walkingMinutes: fitted.walkingMinutes,
     distanceM: Math.round(fitted.route.distanceM), steps: stepsFor(fitted.route.distanceM),
     route: fitted.route.geometry,
+    legs: fitted.route.legs.map((l) => ({ durationS: l.durationS })),
     googleMapsUrl: googleMapsUrl(start, stops, end),
     gpx: gpx(curated.title, stops, fitted.route.geometry),
     candidatesConsidered: ranked.length,
