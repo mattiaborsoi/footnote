@@ -31,6 +31,7 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           use_sticky_comment: true
+          show_full_output: true
           prompt: |
             You are the independent reviewer for pull request #${{ github.event.pull_request.number }} in ${{ github.repository }}.
             You did not write this code. Read CLAUDE.md first, then the diff (`gh pr diff ${{ github.event.pull_request.number }}`) and the PR body.
