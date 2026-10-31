@@ -1,6 +1,6 @@
 import type { LatLng } from "../geo";
 
-export type GeocodeResult = LatLng & { label: string; bbox?: BBox; osmId?: string };
+export type GeocodeResult = LatLng & { label: string; bbox?: BBox; osmId?: string; city?: string };
 export type BBox = { south: number; west: number; north: number; east: number };
 
 export interface Geocoder {
