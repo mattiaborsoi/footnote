@@ -2,6 +2,30 @@
 
 A walk designed around you. A person describes the walk they are in the mood for; the app returns real stops from open map data, each with a short story and a "why it's for you" line, routed with time, distance and steps, exportable to Google Maps. Next.js 16 + TypeScript. **Claude curates, it never invents**: it only picks and orders stops from candidate IDs we supply and writes from the facts attached to them.
 
+## Product
+
+**Problem.** Asking a chatbot for a day out gives untailored waypoints with no timeline and no map. Footnote turns a person's dates, time, company and interests into a plan they can see on a map and trust the timings of: a desktop to plan, a phone to walk.
+
+**Who.** Travellers with a free afternoon or a trip to plan, locals wanting somewhere new, anyone with ninety minutes to fill. Non-technical, mostly on phones.
+
+**Request, never a blank box.** Six questions: where (start by current location or search; end the same, elsewhere, or "surprise me") · how long (slider with the implied distance) · who is walking (just me, kids, older people, limited mobility, pram: drives pace, breaks and step-free routing; pace stays overridable) · interests (icon tiles, long-press to rank: nature, modern architecture, history, technology, gaming, art and craft, cafés, views, photo spots, film locations, museums, shops) · when (now, or a day and time: unlocks opening hours and weather) · anything else (one optional free-text line, a constraint, never the sole input). Desktop shows all six on one page with a live summary sentence.
+
+**Content.** Open data (OSM, Wikidata, Wikipedia) anchors real places. The **scout layer** is the content: a background job per city searches the web (blogs, travel sites, forums, video transcripts) for recommended spots, matches each to a real map place and stores name, one-line reason, source link and date. Facts and links only, never an author's text; every stop credits its source. It starts with key world capitals and expands to a city when people search for it. Per city, pre-made walks and must-sees are cached and offered first: a cached walk costs no model time; re-checking opening hours and weather for the person's date is free, tailoring it to their preferences uses the model.
+
+**Curation rules.** No story, no stop: a thin area gives a shorter walk, never a padded one. Opening hours are checked for the planned day and arrival time; closed stops are swapped or flagged. Weather nudges parks and views. Companions change dwell time, breaks and steps.
+
+**Map.** One calm base map, desaturated while a walk shows. The route is one solid ink-blue line with a white casing. Stops are white numbered circles with a thin halo in the interest colour; start a square, end a diamond. Time pills per leg when zoomed in, one total pill otherwise, never a time on a pin. Detours: dashed blue at reduced opacity with lettered hollow pins, off by default on phone, behind one "Options" chip. "20 more minutes" extensions: a dotted amber spur with a tag, one at a time, tap to swap in. A closed stop gets a grey halo and a clock badge. Nothing thinner than 2 px, no colour-only distinctions.
+
+**The wait (15 to 40 s).** Four honest stages with real durations and no fake percentages: understood · searching · choosing stops · walking the route. On the map the search circle breathes out, candidate dots fade in, the chosen ones grow into numbered pins in walk order, the line draws itself. One short fact rotates underneath. After 20 s say it is slow; after 30 s offer "show what we have".
+
+**Stories.** Name only on the map. One hook line of at most 90 characters on the card, expanding to three short paragraphs, then "why it's here for you" with the person's interests bolded and sources linked. Audio reading comes later.
+
+**Around me (phone).** One button: location, 45 minutes, saved interests, now. The result is a fan of five options within ten minutes, swipeable cards with walking time and open-till, dashed spokes on the map. "Go" routes one leg; "Make this a walk" runs the full pipeline.
+
+**Walks are pages.** Every walk has an id and a shareable link, cached on the device with its stories so it reads offline on the pavement. The **footnoted walk** is the signature: as you walk, numbered superscripts land where you paused, took a photo or opened a story, and at the end a one-page footnoted record of the walk can be shared as an image or printed.
+
+**Trial and plans.** The first walk is real and exportable; the magic-link sign-in is asked when the person wants to save or share it. Then a weekly pass for travellers and a monthly plan for locals, "up to N walks", sized from measured cost.
+
 ## Run and test
 
 Everything runs in containers. Nothing is installed on any host machine.
@@ -33,6 +57,7 @@ Everything runs in containers. Nothing is installed on any host machine.
 
 ## Decisions
 
+- 2026-10-31 — Product reshaped after two independent evaluations and the owner's review: a plan-builder for dates and companions, not a mood walk. Adopted: the six-question request, the scout layer with a per-city cache of pre-made walks, "no story, no stop", opening hours and weather in selection, companions as a pace profile, the map and waiting design, stories as one expandable line, walks as shareable pages, the footnoted walk, "around me" on the phone, a real exportable trial with sign-in afterwards. See Product.
 - 2026-10-31 — Dependabot handles minors and patches only; majors are moved by hand (Node to the next LTS, and TypeScript, ESLint and Next together, since typescript-eslint lags TypeScript majors). Node 25+ ships no corepack, so pnpm is installed with npm at the version pinned in package.json. Dependabot PRs are merged only when checks are green.
 - 2026-10-31 — Repo is private under GitHub Free, which has no branch protection: a pre-push hook blocks pushes to main until the repo goes public.
 - 2026-10-31 — Everything in containers. Test environment on a home server, production on a cloud VM with its own LiteLLM. The app only ever sees an OpenAI-compatible base URL.
@@ -45,4 +70,4 @@ Everything runs in containers. Nothing is installed on any host machine.
 
 ## Status
 
-Milestone 0 (scaffold and pipeline) done: repo, scaffold, test environment, notes, privacy hooks, CI with reviewer and QA agents. Milestone 1 (walks without AI) done: a live 60-minute walk through the demo route returns real stops with facts, within budget, with a Google Maps link. Next: milestone 2, Claude in the loop (settings, LLM module, interpret and curate, progress streaming, guardrails). Before going public: squash the history and review this file for commercial detail.
+Milestone 0 (scaffold and pipeline) done: repo, scaffold, test environment, notes, privacy hooks, CI with reviewer and QA agents. Milestones 0 and 1 done (pipeline, test environment, CI, walks without AI). Milestone 2, in progress: product brief and mockups before more code. Then: 3 Claude in the loop (LLM module, interpret from the six questions, curate with "no story, no stop", opening hours, weekday and weather checks, staged progress streaming); 4 scout layer and city cache; 5 UI (request flow, map overlay, the wait, walk pages, around me, stories, footnoted walk); 6 trial, sign-in and plans; 7 hardening and the droplet. Before going public: squash the history and review this file for commercial detail.
