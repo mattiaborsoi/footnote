@@ -26,7 +26,7 @@ async function CityContent({ params }: { params: Promise<{ id: string }> }) {
       <header className="flex flex-col gap-2">
         <Link href="/" className="font-serif text-xl font-semibold">Footnote</Link>
         <h1 className="font-serif text-[36px] leading-tight tracking-tight">Ready-made walks in {city.name}</h1>
-        <p className="text-muted">Built from the city's map and from what travel writers recommend. Open one, re-check it for your day, or tailor it to you.</p>
+        <p className="text-muted">Built from the city&apos;s map and from what travel writers recommend. Open one, re-check it for your day, or tailor it to you.</p>
       </header>
       {presets.length ? (
         <ol className="flex flex-col gap-4">
