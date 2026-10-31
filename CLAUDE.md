@@ -7,9 +7,10 @@ A walk designed around you. A person describes the walk they are in the mood for
 Everything runs in containers. Nothing is installed on any host machine.
 
 - Start the test environment: `docker compose up -d --build` (add `-V` after dependency changes). App on :3002, Mailpit (catches all email) on :8025.
-- Checks: `docker compose exec -T app pnpm lint` and `docker compose exec -T app pnpm exec tsc --noEmit`.
+- Checks: `docker compose exec -T app pnpm lint` and `docker compose exec -T app sh -c "pnpm exec next typegen && pnpm exec tsc --noEmit"` (typegen creates the route types tsc needs; the dev server does it implicitly).
 - Working loop: edit in the main checkout, sync the tree to the test machine (`rsync -a --delete --exclude .git --exclude node_modules --exclude .next --exclude .env --exclude data ./ <test-host>:<path>/`), the dev container reloads.
 - Secrets live only in `.env` (copy of `.env.example`, chmod 600, never committed). Container data lives in `./data/` (gitignored).
+- CI on every PR (`.github/workflows/`): `checks` builds the dev image and runs lint, type-check and a production build inside it; `privacy` runs `.githooks/privacy-scan` over the PR's diff, messages, title and body with the denylist from the `PRIVACY_DENYLIST` secret, plus gitleaks; `review` and `qa` run independent Opus agents on the Claude Code GitHub Action, authenticated by the `CLAUDE_CODE_OAUTH_TOKEN` secret (read-only reviewer; QA may run Docker and curl). Merge only when all are green. Dependabot opens weekly grouped update PRs.
 - Model access is one OpenAI-compatible endpoint, `LLM_BASE_URL`: locally a proxy on the test host, in production LiteLLM with a real API key.
 
 ## Rules
@@ -39,4 +40,4 @@ Everything runs in containers. Nothing is installed on any host machine.
 
 ## Status
 
-Milestone 0 (scaffold and pipeline): repo, scaffold, test environment, notes and privacy hooks done; CI workflows next. Then milestone 1: walks without AI. Before going public: squash the history and review this file for commercial detail.
+Milestone 0 (scaffold and pipeline) done: repo, scaffold, test environment, notes, privacy hooks, CI with reviewer and QA agents. Next: milestone 1, walks without AI. Before going public: squash the history and review this file for commercial detail.
