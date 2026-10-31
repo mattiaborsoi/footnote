@@ -5,7 +5,7 @@ export type Scored = Candidate & { score: number };
 
 /** Detail (how much there is to say) minus detour cost (how far off the way it is). */
 export function score(c: Candidate, start: LatLng, end: LatLng | null, corridorM: number): number {
-  const detail = Math.min(c.facts.length, 6) + (c.tags.wikipedia ? 2 : 0) + (c.tags.wikidata ? 1 : 0);
+  const detail = Math.min(c.facts.length, 6) + (c.tags.wikipedia ? 2 : 0) + (c.tags.wikidata ? 1 : 0) + (c.boost ?? 0);
   const off = end ? detourM(start, end, c) : Math.max(0, distanceM(start, c) - corridorM / 2);
   return detail - (off / corridorM) * 4;
 }
