@@ -1,0 +1,3 @@
+#!/bin/sh
+# Checks the commit message: conventional subject, no personal information.
+exec "$(git rev-parse --show-toplevel)/.githooks/privacy-scan" --message "$1"
