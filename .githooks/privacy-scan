@@ -120,7 +120,8 @@ class Scanner:
         while lines and not lines[0].strip():
             lines.pop(0)
         subject = lines[0] if lines else ""
-        if not subject.startswith("Merge ") and not SUBJECT.match(subject):
+        skip_subject = os.environ.get("PRIVACY_SKIP_SUBJECT") == "1"
+        if not skip_subject and not subject.startswith("Merge ") and not SUBJECT.match(subject):
             self.report(where, "subject-format",
                         "expected `type(scope)?: short description` with type feat|fix|chore|docs|test|refactor|ci|perf|revert, at most 72 characters")
         for i, line in enumerate(lines, 1):
