@@ -1,15 +1,12 @@
-export default function Home() {
-  return (
-    <main className="flex flex-1 flex-col items-center justify-center gap-6 px-6 text-center">
-      <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">
-        Coming soon
-      </p>
-      <h1 className="font-serif text-6xl tracking-tight sm:text-7xl">
-        Footnote
-      </h1>
-      <p className="max-w-md text-lg text-neutral-600 dark:text-neutral-400">
-        A walk designed around you.
-      </p>
-    </main>
-  );
+import { Suspense } from "react";
+import Planner from "@/components/request/Planner";
+
+export default function Home({ searchParams }: { searchParams: Promise<{ start?: string; minutes?: string }> }) {
+  return <Suspense fallback={null}><HomeContent searchParams={searchParams} /></Suspense>;
+}
+
+async function HomeContent({ searchParams }: { searchParams: Promise<{ start?: string; minutes?: string }> }) {
+  const { start, minutes } = await searchParams;
+  const m = Number(minutes);
+  return <Planner initial={{ ...(start ? { start: start.slice(0, 120) } : {}), ...(m >= 15 && m <= 480 ? { minutes: m } : {}) }} />;
 }

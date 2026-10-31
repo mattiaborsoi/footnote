@@ -22,13 +22,14 @@ export async function planWalk(raw: unknown, p: Providers, llm: Llm, emit: (e: S
   const t = () => performance.now();
   let t0 = t();
   const intent = await interpret(raw, llm.transport, llm.models.interpret);
-  emit({ stage: "understood", ms: Math.round(t() - t0), detail: { minutes: intent.minutes, pace: intent.pace, interests: intent.interests, companions: intent.companions, language: intent.language } });
-
-  t0 = t();
-  const start = await p.geocoder.geocode(intent.start);
+  const coords = intent.start.match(/^\s*(-?\d{1,2}(?:\.\d+)?)\s*,\s*(-?\d{1,3}(?:\.\d+)?)\s*$/);
+  const start = coords ? { lat: Number(coords[1]), lon: Number(coords[2]), label: "Your location" } : await p.geocoder.geocode(intent.start);
   if (!start) throw new Error(`Could not find "${intent.start}"`);
   const end = intent.end ? await p.geocoder.geocode(intent.end, start) : null;
   if (intent.end && !end) throw new Error(`Could not find "${intent.end}"`);
+  emit({ stage: "understood", ms: Math.round(t() - t0), detail: { minutes: intent.minutes, pace: intent.pace, interests: intent.interests, companions: intent.companions, language: intent.language, start: { lat: start.lat, lon: start.lon, label: start.label }, end: end ? { lat: end.lat, lon: end.lon } : null } });
+
+  t0 = t();
   const budgetM = intent.minutes * 60 * PACE_MPS[intent.pace];
   const direct = end ? distanceM(start, end) : 0;
   const corridorM = Math.max(300, (budgetM - direct) / 2);
@@ -36,9 +37,9 @@ export async function planWalk(raw: unknown, p: Providers, llm: Llm, emit: (e: S
   const selectors = [...new Set(intent.interests.flatMap((i) => SELECTORS[i]))];
   const startAt = localAsUtc(intent.when);
   const endAt = new Date(startAt.getTime() + intent.minutes * 60_000);
-  const cachedPlaces = await cachedPlacesFor(bbox, start, intent.interests).catch(() => null);
+  const cachedPlaces = await cachedPlacesFor(bbox, start, intent.interests, intent.language).catch(() => null);
   const [mapped, scouted, weather] = await Promise.all([
-    cachedPlaces ?? p.places.search(bbox, selectors),
+    cachedPlaces ?? p.places.search(bbox, selectors, intent.language),
     loadSpotsInBbox(bbox).catch(() => []),
     weatherFor(start, startAt, endAt).catch(() => null),
   ]);
@@ -51,11 +52,13 @@ export async function planWalk(raw: unknown, p: Providers, llm: Llm, emit: (e: S
     const fact = h.state === "open" ? `Hours during the walk: ${h.note}` : h.state === "closed" ? `Hours: ${h.note}` : null;
     return [fact ? { ...c, facts: [...c.facts, fact] } : c];
   });
-  const ranked = rank(withHours, start, end, corridorM, 40);
-  emit({ stage: "searching", ms: Math.round(t() - t0), detail: { found: found.length, cached: !!cachedPlaces, scouted: scouted.length, closed: found.length - withHours.length, kept: ranked.length, weather: weather?.summary ?? null, candidates: ranked.map((c) => ({ id: c.id, lat: c.lat, lon: c.lon })) } });
+  // Longer walks deserve more stops and a wider pool to choose from.
+  const targetStops = Math.min(12, Math.max(4, Math.round(intent.minutes / 20)));
+  const ranked = rank(withHours, start, end, corridorM, Math.min(70, 30 + targetStops * 4));
+  emit({ stage: "searching", ms: Math.round(t() - t0), detail: { found: found.length, cached: !!cachedPlaces, scouted: scouted.length, start: { lat: start.lat, lon: start.lon }, end: end ? { lat: end.lat, lon: end.lon } : null, bbox, sample: ranked.flatMap((c) => c.facts.filter((f) => !f.startsWith("Hours") && !f.startsWith("Wikipedia") && !f.startsWith("Wikidata")).slice(0, 1).map((f) => `${c.name}: ${f.replace(/^[A-Za-z ]+: /, "")}`)).slice(0, 6), closed: found.length - withHours.length, kept: ranked.length, weather: weather?.summary ?? null, candidates: ranked.map((c) => ({ id: c.id, lat: c.lat, lon: c.lon })) } });
 
   t0 = t();
-  const { curated, usage } = await curate({ ...intent, vibe: [intent.vibe, weather?.nudge ? `Weather: ${weather.summary}. ${weather.nudge}` : weather ? `Weather: ${weather.summary}.` : ""].filter(Boolean).join(" ") }, ranked, llm.transport, llm.models.curate);
+  const { curated, usage } = await curate({ ...intent, targetStops, vibe: [intent.vibe, weather?.nudge ? `Weather: ${weather.summary}. ${weather.nudge}` : weather ? `Weather: ${weather.summary}.` : ""].filter(Boolean).join(" ") }, ranked, llm.transport, llm.models.curate);
   const byId = new Map(ranked.map((c) => [c.id, c]));
   const chosen = curated.stops.map((s) => ({ ...byId.get(s.id)!, hook: s.hook, story: s.story, why: s.why }));
   emit({ stage: "choosing", ms: Math.round(t() - t0), detail: { stops: chosen.map((c) => c.id), usage } });

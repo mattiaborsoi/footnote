@@ -22,7 +22,7 @@ export type Candidate = LatLng & {
 };
 
 export interface PlacesProvider {
-  search(bbox: { south: number; west: number; north: number; east: number }, selectors: string[]): Promise<Candidate[]>;
+  search(bbox: { south: number; west: number; north: number; east: number }, selectors: string[], language?: string): Promise<Candidate[]>;
 }
 
 export type Route = {

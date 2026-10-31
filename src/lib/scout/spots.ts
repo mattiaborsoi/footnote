@@ -2,11 +2,12 @@ import { and, between } from "drizzle-orm";
 import { getDb } from "../db";
 import { spots } from "../db/schema";
 import type { BBox, Candidate } from "../providers/types";
+import { decodeEntities } from "../providers/readpage";
 
 type Source = { title: string; url: string };
 
 export function spotToCandidate(s: { id: number; name: string; category: string; lat: number; lon: number; osmId: string | null; reason: string; sources: unknown; mentions: number }): Candidate {
-  const sources = (Array.isArray(s.sources) ? s.sources : []) as Source[];
+  const sources = ((Array.isArray(s.sources) ? s.sources : []) as Source[]).map((x) => ({ ...x, title: decodeEntities(x.title) }));
   const credit = sources[0] ? `Recommended on "${sources[0].title}"` : "Recommended online";
   return {
     id: s.osmId ?? `scout:${s.id}`,

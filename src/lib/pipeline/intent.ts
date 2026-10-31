@@ -16,6 +16,7 @@ export const Intent = z.object({
   companions: z.array(z.enum(["me", "kids", "older", "limited_mobility", "pram"])).default(["me"]),
   when: z.string().default("now"),
   language: z.string().default("en"),
+  targetStops: z.number().int().min(2).max(12).optional(),
 });
 export type Intent = z.infer<typeof Intent>;
 

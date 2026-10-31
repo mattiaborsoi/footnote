@@ -6,6 +6,7 @@ import { Interest, SELECTORS } from "../pipeline/intent";
 import { logEvent } from "../log";
 import type { BBox, Candidate, Geocoder, PlacesProvider } from "../providers/types";
 import { normaliseName } from "./index";
+import { displayName } from "../names";
 
 /** Which cached categories answer an interest; the live selectors do the same by tag. */
 export const INTEREST_CATEGORIES: Record<Interest, string[]> = {
@@ -51,7 +52,7 @@ export async function cachePlaces(city: { id: string; lat: number; lon: number; 
 }
 
 /** Cached candidates for a walk, or null when no fresh city covers the start: the caller then goes live and registers the city. */
-export async function cachedPlacesFor(bbox: BBox, start: LatLng, interests: Interest[]): Promise<Candidate[] | null> {
+export async function cachedPlacesFor(bbox: BBox, start: LatLng, interests: Interest[], language = "en"): Promise<Candidate[] | null> {
   const db = getDb();
   if (!db) return null;
   const rows = await db.select().from(cities).where(and(isNotNull(cities.placesAt), sql`${cities.south} <= ${start.lat} and ${cities.north} >= ${start.lat} and ${cities.west} <= ${start.lon} and ${cities.east} >= ${start.lon}`));
@@ -62,7 +63,12 @@ export async function cachedPlacesFor(bbox: BBox, start: LatLng, interests: Inte
   if (outside && distanceM(start, city) > 4000) return null;
   const wanted = new Set(interests.flatMap((i) => INTEREST_CATEGORIES[i]));
   const found = await db.select().from(places).where(and(eq(places.cityId, city.id), between(places.lat, bbox.south, bbox.north), between(places.lon, bbox.west, bbox.east)));
-  return found.filter((p) => wanted.has(p.category)).map((p) => ({ id: p.id, name: p.name, category: p.category, lat: p.lat, lon: p.lon, tags: p.tags as Record<string, string>, facts: p.facts as string[] }));
+  return found.filter((p) => wanted.has(p.category)).map((p) => {
+    const tags = p.tags as Record<string, string>;
+    const { name, localName } = displayName(tags, language);
+    const facts = (p.facts as string[]).filter((f) => !f.startsWith("Local name: "));
+    return { id: p.id, name: name || p.name, category: p.category, lat: p.lat, lon: p.lon, tags, facts: localName ? [`Local name: ${localName}`, ...facts] : facts };
+  });
 }
 
 /** Make sure the start's city has a row, so the scheduler caches and scouts it. */

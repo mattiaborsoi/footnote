@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { htmlToText, pageTitle } from "@/lib/providers/readpage";
+import { decodeEntities, htmlToText, pageTitle } from "@/lib/providers/readpage";
 import { aggregate, normaliseName } from "@/lib/scout";
 import { mergeScouted, spotToCandidate } from "@/lib/scout/spots";
 import type { Candidate } from "@/lib/providers/types";
@@ -22,6 +22,10 @@ it("aggregate merges the same place across pages and counts mentions", () => {
   expect(a[0]).toMatchObject({ name: "The Circus", mentions: 3, reason: "r1" });
   expect(a[0].sources.map((s) => s.url)).toEqual(["u1", "u2"]);
   expect(a[1].name).toBe("Pump Room");
+});
+
+it("decodeEntities handles named and numeric entities", () => {
+  expect(decodeEntities("A Photographer&#039;s Guide &amp; more&hellip;")).toBe("A Photographer's Guide & more…");
 });
 
 it("htmlToText keeps words and drops chrome", () => {
