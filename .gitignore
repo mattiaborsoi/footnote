@@ -49,3 +49,7 @@ next-env.d.ts
 
 # copied from node_modules at dev/build time (map worker)
 /public/maplibre-gl-*.mjs
+
+# browser test output
+/playwright-report/
+/test-results/

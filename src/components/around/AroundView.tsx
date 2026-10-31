@@ -13,7 +13,7 @@ const WalkMap = dynamic(() => import("@/components/map/WalkMap"), { ssr: false }
 export default function AroundView() {
   const [pos, setPos] = useState<{ lat: number; lon: number } | null>(null);
   const [options, setOptions] = useState<Option[] | null>(null);
-  const [error, setError] = useState<string | null>(() => (typeof navigator !== "undefined" && !navigator.geolocation ? "This browser cannot share your location." : null));
+  const [error, setError] = useState<string | null>(null);
   const [active, setActive] = useState<string | null>(null);
 
   const load = useCallback(async (p: { lat: number; lon: number }) => {
@@ -27,7 +27,8 @@ export default function AroundView() {
   }, []);
 
   useEffect(() => {
-    if (!navigator.geolocation) return;
+    // Geolocation only exists on secure origins; say so instead of waiting forever. Set on the next tick to keep hydration clean.
+    if (!navigator.geolocation) { const t = setTimeout(() => setError("Location needs a secure (https) connection or localhost."), 0); return () => clearTimeout(t); }
     navigator.geolocation.getCurrentPosition(
       (g) => { const p = { lat: g.coords.latitude, lon: g.coords.longitude }; setPos(p); void load(p); },
       () => setError("Allow location access to see what is around you."), { timeout: 10_000 },
