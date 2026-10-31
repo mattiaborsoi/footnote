@@ -14,6 +14,7 @@ export const RequestForm = z.object({
   when: z.string().default("now"),
   notes: z.string().max(500).default(""),
   language: z.string().min(2).max(35).default("en"),
+  pace: z.enum(["relaxed", "normal", "brisk"]).optional(),
 });
 export type RequestForm = z.infer<typeof RequestForm>;
 
@@ -36,7 +37,7 @@ export async function interpret(raw: unknown, transport: Transport | null, model
     end: form.end.kind === "place" ? form.end.place ?? null : form.end.kind === "same" ? form.start : null,
     endMode: form.end.kind,
     minutes: form.minutes,
-    pace: paceFor(form.companions),
+    pace: form.pace ?? paceFor(form.companions),
     interests: [...form.interests],
     avoid: [] as string[],
     mustInclude: [] as string[],

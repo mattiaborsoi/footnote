@@ -52,7 +52,7 @@ export async function planWalk(raw: unknown, p: Providers, llm: Llm, emit: (e: S
     return [fact ? { ...c, facts: [...c.facts, fact] } : c];
   });
   const ranked = rank(withHours, start, end, corridorM, 40);
-  emit({ stage: "searching", ms: Math.round(t() - t0), detail: { found: found.length, cached: !!cachedPlaces, scouted: scouted.length, closed: found.length - withHours.length, kept: ranked.length, weather: weather?.summary ?? null, candidates: ranked.map((c) => ({ id: c.id, lat: c.lat, lon: c.lon })) } });
+  emit({ stage: "searching", ms: Math.round(t() - t0), detail: { found: found.length, cached: !!cachedPlaces, scouted: scouted.length, start: { lat: start.lat, lon: start.lon }, end: end ? { lat: end.lat, lon: end.lon } : null, bbox, sample: ranked.flatMap((c) => c.facts.filter((f) => !f.startsWith("Hours") && !f.startsWith("Wikipedia") && !f.startsWith("Wikidata")).slice(0, 1).map((f) => `${c.name}: ${f.replace(/^[A-Za-z ]+: /, "")}`)).slice(0, 6), closed: found.length - withHours.length, kept: ranked.length, weather: weather?.summary ?? null, candidates: ranked.map((c) => ({ id: c.id, lat: c.lat, lon: c.lon })) } });
 
   t0 = t();
   const { curated, usage } = await curate({ ...intent, vibe: [intent.vibe, weather?.nudge ? `Weather: ${weather.summary}. ${weather.nudge}` : weather ? `Weather: ${weather.summary}.` : ""].filter(Boolean).join(" ") }, ranked, llm.transport, llm.models.curate);
