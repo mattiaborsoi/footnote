@@ -13,7 +13,7 @@ import { loadSpotsInBbox, mergeScouted } from "../scout/spots";
 import { cachedPlacesFor, registerCity } from "../scout/places";
 import type { Providers, Walk } from "./walk";
 
-export type Stage = "understood" | "searching" | "choosing" | "routing";
+export type Stage = "understood" | "searching" | "probing" | "choosing" | "routing";
 export type StageEvent = { stage: Stage; ms: number; detail: Record<string, unknown> };
 export type Llm = { transport: Transport; models: { interpret: string; curate: string } };
 
@@ -58,9 +58,17 @@ export async function planWalk(raw: unknown, p: Providers, llm: Llm, emit: (e: S
   emit({ stage: "searching", ms: Math.round(t() - t0), detail: { found: found.length, cached: !!cachedPlaces, scouted: scouted.length, start: { lat: start.lat, lon: start.lon }, end: end ? { lat: end.lat, lon: end.lon } : null, bbox, sample: ranked.flatMap((c) => c.facts.filter((f) => !f.startsWith("Hours") && !f.startsWith("Wikipedia") && !f.startsWith("Wikidata")).slice(0, 1).map((f) => `${c.name}: ${f.replace(/^[A-Za-z ]+: /, "")}`)).slice(0, 6), closed: found.length - withHours.length, kept: ranked.length, weather: weather?.summary ?? null, candidates: ranked.map((c) => ({ id: c.id, lat: c.lat, lon: c.lon })) } });
 
   t0 = t();
+  // While the model chooses, route from the start to the best candidates: the browser animates these along the streets.
+  const probing = (async () => {
+    const targets = ranked.slice(0, 6);
+    const routes = await Promise.all(targets.map((c) => p.router.walk([start, c]).then((rt) => rt.geometry).catch(() => null)));
+    const paths = routes.filter((g): g is NonNullable<typeof g> => !!g && g.length > 1);
+    emit({ stage: "probing", ms: Math.round(t() - t0), detail: { paths } });
+  })().catch(() => undefined);
   const { curated, usage } = await curate({ ...intent, targetStops, vibe: [intent.vibe, weather?.nudge ? `Weather: ${weather.summary}. ${weather.nudge}` : weather ? `Weather: ${weather.summary}.` : ""].filter(Boolean).join(" ") }, ranked, llm.transport, llm.models.curate);
   const byId = new Map(ranked.map((c) => [c.id, c]));
   const chosen = curated.stops.map((s) => ({ ...byId.get(s.id)!, hook: s.hook, story: s.story, why: s.why }));
+  await probing;
   emit({ stage: "choosing", ms: Math.round(t() - t0), detail: { stops: chosen.map((c) => c.id), usage } });
 
   t0 = t();

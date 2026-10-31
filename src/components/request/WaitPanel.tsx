@@ -12,7 +12,7 @@ export default function WaitPanel({ stages, facts, startedAt, error }: { stages:
   const [factIx, setFactIx] = useState(0);
   useEffect(() => { const t = setInterval(() => setElapsed(Math.round((Date.now() - startedAt) / 1000)), 1000); return () => clearInterval(t); }, [startedAt]);
   useEffect(() => { if (!facts.length) return; const t = setInterval(() => setFactIx((i) => (i + 1) % facts.length), 5000); return () => clearInterval(t); }, [facts]);
-  const done = new Map(stages.map((s) => [s.stage, s]));
+  const done = new Map(stages.filter((s) => ORDER.includes(s.stage)).map((s) => [s.stage, s]));
   const current = ORDER.find((s) => !done.has(s)) ?? null;
   const detailFor = (s: string) => {
     const d = done.get(s)?.detail;
