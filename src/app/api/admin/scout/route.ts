@@ -3,12 +3,17 @@ import { nominatim } from "@/lib/providers/nominatim";
 import { readPage } from "@/lib/providers/readpage";
 import { searxng } from "@/lib/providers/search";
 import { scoutCity } from "@/lib/scout";
+import { tick } from "@/lib/scout/scheduler";
 
 /** Owner-only trigger for now: POST {"city": "..."} with the admin token. A scheduler replaces it later. */
 export async function POST(req: Request) {
   const token = process.env.ADMIN_TOKEN;
   if (!token || req.headers.get("authorization") !== `Bearer ${token}`) return Response.json({ error: "not allowed" }, { status: 401 });
-  const body = (await req.json().catch(() => ({}))) as { city?: string; pagesPerTheme?: number };
+  const body = (await req.json().catch(() => ({}))) as { city?: string; pagesPerTheme?: number; tick?: boolean };
+  if (body.tick) {
+    await tick();
+    return Response.json({ ok: true });
+  }
   if (!body.city) return Response.json({ error: "city is required" }, { status: 400 });
   try {
     const cfg = configFromEnv();

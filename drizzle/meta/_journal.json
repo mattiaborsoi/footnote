@@ -15,6 +15,13 @@
       "when": 1793470231422,
       "tag": "0001_robust_mister_fear",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793472240260,
+      "tag": "0002_spotty_smiling_tiger",
+      "breakpoints": true
     }
   ]
 }
