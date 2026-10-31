@@ -1,0 +1,3 @@
+#!/bin/sh
+# Blocks commits that add personal information or secrets. Details: .githooks/privacy-scan --help
+exec "$(git rev-parse --show-toplevel)/.githooks/privacy-scan" --staged
