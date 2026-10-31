@@ -46,3 +46,6 @@ next-env.d.ts
 
 # persistent data of the containers (Postgres); lives next to the code, never committed
 /data/
+
+# copied from node_modules at dev/build time (map worker)
+/public/maplibre-gl-*.mjs
