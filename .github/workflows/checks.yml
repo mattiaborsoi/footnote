@@ -26,3 +26,24 @@ jobs:
         run: docker run --rm -v "$PWD":/app -v /app/node_modules -v /app/.next footnote-dev sh -c "pnpm exec next typegen && pnpm exec tsc --noEmit"
       - name: Production build
         run: docker run --rm -v "$PWD":/app -v /app/node_modules -v /app/.next -e NEXT_TELEMETRY_DISABLED=1 footnote-dev pnpm build
+
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.1-noble
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install pnpm and dependencies
+        run: npm install -g "pnpm@$(node -p "require('./package.json').packageManager.split('@')[1]")" && pnpm install --frozen-lockfile
+      - name: Browser tests (the dev server starts without a database or a model; the tests mock what they need)
+        run: pnpm test:e2e
+        env:
+          CI: "true"
+          HOME: /root
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report
+          retention-days: 7
