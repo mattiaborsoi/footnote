@@ -39,6 +39,9 @@ export default function Planner({ initial, tailorOf }: { initial?: Partial<FormS
         if (event === "stage") {
           const s = data as StageState & { detail: Record<string, unknown> };
           setStages((prev) => [...prev, s]);
+          if (s.stage === "understood") {
+            setStart((s.detail.start as { lat: number; lon: number }) ?? null); setEnd((s.detail.end as { lat: number; lon: number } | null) ?? null);
+          }
           if (s.stage === "searching") {
             const d = s.detail;
             setCands((d.candidates as Cand[]) ?? []); setBox((d.bbox as Box) ?? null); setStart((d.start as { lat: number; lon: number }) ?? null); setEnd((d.end as { lat: number; lon: number } | null) ?? null);

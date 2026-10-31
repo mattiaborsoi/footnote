@@ -1,5 +1,6 @@
 import { cached, throttled, USER_AGENT } from "./cache";
 import type { Candidate, PlacesProvider } from "./types";
+import { displayName } from "../names";
 
 const BASE = process.env.OVERPASS_URL ?? "https://overpass-api.de/api/interpreter";
 
@@ -19,7 +20,7 @@ export function factsFromTags(t: Record<string, string>): string[] {
 }
 
 export const overpass: PlacesProvider = {
-  async search(bbox, selectors): Promise<Candidate[]> {
+  async search(bbox, selectors, language = "en"): Promise<Candidate[]> {
     const b = `${bbox.south},${bbox.west},${bbox.north},${bbox.east}`;
     const body = `[out:json][timeout:25];(${selectors.map((s) => `nwr${s}["name"](${b});`).join("")});out center tags;`;
     return cached(`ovp:${body}`, 3600_000, () =>
@@ -30,7 +31,8 @@ export const overpass: PlacesProvider = {
         return data.elements.flatMap((e) => {
           const lat = e.lat ?? e.center?.lat, lon = e.lon ?? e.center?.lon, tags = e.tags ?? {};
           if (lat === undefined || lon === undefined || !tags.name) return [];
-          return [{ id: `osm:${e.type}/${e.id}`, name: tags.name, category: categoryOf(tags), lat, lon, tags, facts: factsFromTags(tags) }];
+          const { name, localName } = displayName(tags, language);
+          return [{ id: `osm:${e.type}/${e.id}`, name, category: categoryOf(tags), lat, lon, tags, facts: [...(localName ? [`Local name: ${localName}`] : []), ...factsFromTags(tags)] }];
         });
       }),
     );

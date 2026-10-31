@@ -17,7 +17,7 @@ export default function WaitPanel({ stages, facts, startedAt, error }: { stages:
   const detailFor = (s: string) => {
     const d = done.get(s)?.detail;
     if (!d) return "";
-    if (s === "understood") return `${d.minutes} min, ${d.pace} pace, ${(d.interests as string[] | undefined)?.join(", ") ?? ""}`;
+    if (s === "understood") return `${(d.start as { label?: string } | undefined)?.label?.split(",")[0] ?? ""}: ${d.minutes} min, ${d.pace} pace, ${(d.interests as string[] | undefined)?.join(", ") ?? ""}`;
     if (s === "searching") return `${d.kept} places worth a look${d.cached ? ", from the city cache" : ""}`;
     if (s === "choosing") return `${(d.stops as string[] | undefined)?.length ?? 0} stops chosen`;
     if (s === "routing") return `${d.totalMinutes} minutes door to door`;
