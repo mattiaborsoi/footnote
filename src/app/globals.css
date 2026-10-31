@@ -52,6 +52,7 @@ body {
 
 /* Map markers: white numbered discs with a halo in the interest colour; start square, end diamond. */
 .fn-stop { width: 30px; height: 30px; border-radius: 999px; background: #fff; color: #1e3a8a; font: 600 13px var(--font-inter), system-ui, sans-serif; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 3px var(--halo, #1e3a8a), 0 1px 3px rgba(20,20,19,.3); cursor: pointer; }
+.fn-stop.fn-stop-sm { width: 22px; height: 22px; font-size: 11px; box-shadow: 0 0 0 2px #1e3a8a; }
 .fn-stop[data-closed="true"] { color: #5f5e5a; --halo: #9c9a94; }
 .fn-stop[data-active="true"] { box-shadow: 0 0 0 3px var(--halo, #1e3a8a), 0 0 0 5px #141413, 0 1px 3px rgba(20,20,19,.3); }
 .fn-start { width: 18px; height: 18px; background: #1e3a8a; border: 3px solid #fff; box-shadow: 0 1px 3px rgba(20,20,19,.3); }
