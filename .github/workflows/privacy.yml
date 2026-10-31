@@ -20,6 +20,9 @@ jobs:
         with:
           fetch-depth: 0
       - name: Scan the PR's diff and commit messages
+        env:
+          # Dependabot writes its own long subjects; its diffs and messages are still scanned.
+          PRIVACY_SKIP_SUBJECT: ${{ github.actor == 'dependabot[bot]' && '1' || '0' }}
         run: .githooks/privacy-scan --range "origin/${{ github.base_ref }}..HEAD"
       - name: Scan the PR title and body
         env:
