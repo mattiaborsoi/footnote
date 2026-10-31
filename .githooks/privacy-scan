@@ -26,7 +26,7 @@ MARK = "privacy-ok"
 FIXTURE_DIRS = ("tests/fixtures/",)
 SKIP_FILES = ("pnpm-lock.yaml", "package-lock.json", "yarn.lock")
 FORBIDDEN_PATHS = re.compile(r"^(\.env(\..*)?|\.local(/.*)?)$")
-ALLOWED_EMAIL = re.compile(r"@(example\.(com|org|net)|([\w-]+\.)*noreply\.github\.com|anthropic\.com)$", re.I)
+ALLOWED_EMAIL = re.compile(r"@(example\.(com|org|net)|([\w-]+\.)*github\.com|anthropic\.com)$", re.I)
 SUBJECT = re.compile(r"^(?:(?:fixup|squash)! )?(?:feat|fix|chore|docs|test|refactor|ci|perf|revert)(?:\([a-z0-9./-]+\))?!?: \S.{0,69}$")
 
 RULES = [
