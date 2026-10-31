@@ -43,3 +43,6 @@ next-env.d.ts
 
 # local experiments and personal test runs (never committed)
 /.local/
+
+# persistent data of the containers (Postgres); lives next to the code, never committed
+/data/
