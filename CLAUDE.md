@@ -24,6 +24,12 @@ A walk designed around you. A person describes the walk they are in the mood for
 
 **Walks are pages.** Every walk has an id and a shareable link, cached on the device with its stories so it reads offline on the pavement. The **footnoted walk** is the signature: as you walk, numbered superscripts land where you paused, took a photo or opened a story, and at the end a one-page footnoted record of the walk can be shared as an image or printed.
 
+**Language.** The interface and every story are in the person's language: the request carries `language` (default from the browser), the model writes in it, and facts come from that language's Wikipedia where it exists. English first, structure for more from day one.
+
+**Product logs.** We must see what people ask for, how long they wait at each stage, what they tap and every error they meet. Events go to our own Postgres, server-side, keyed by walk and session id, with no third-party trackers and no analytics cookie, so no consent banner is needed. The free-text line is kept for product improvement with a 90-day retention and is named in the privacy notice; stage timings, model usage and scrubbed errors are kept as aggregates.
+
+**Feedback button.** A bug icon on every screen. Reports go to a feedback table in our Postgres with the context attached automatically (walk id, screen, device class, the last few events) and an email notification to the owner through the transactional mail provider. Never to GitHub: reports may hold personal details and the repo will be public.
+
 **Trial and plans.** The first walk is real and exportable; the magic-link sign-in is asked when the person wants to save or share it. Then a weekly pass for travellers and a monthly plan for locals, "up to N walks", sized from measured cost.
 
 ## Run and test
@@ -53,10 +59,11 @@ Everything runs in containers. Nothing is installed on any host machine.
 - `src/lib/pipeline/` — `intent.ts` (Intent schema, interest → OSM selectors, pace, dwell), `candidates.ts` (score, dedupe, pick and order), `fit.ts` (deterministic time-budget fitting), `export.ts` (Google Maps link with the nine-waypoint cap, GPX), `walk.ts` (orchestration).
 - `tests/unit/` with vitest; `tests/fixtures/city.ts` is the only place with coordinates (central Bath).
 - `compose.yml` + `Dockerfile` — dev target with the source bind-mounted; a production target comes with the cloud deployment.
-- Planned: `src/lib/llm/` (the one module that talks to the model) with interpret and curate replacing the hard-coded intent and the score-based pick.
+- `src/lib/llm/client.ts` — the one module that talks to the model: OpenAI-compatible chat, JSON answers validated with Zod, one corrective retry, usage captured. `src/lib/pipeline/interpret.ts` (six-question form → Intent, the model only reads the free-text line), `curate.ts` (stops chosen from candidate ids with cited facts; no facts, no stop), `plan.ts` (the staged pipeline with events), `src/app/api/walk` (POST, server-sent events: stage, walk, error). `src/lib/log.ts` writes JSON-line events with the free text scrubbed; a Postgres events table follows.
 
 ## Decisions
 
+- 2026-10-31 — Product logs in our own Postgres with no cookies and no third parties; free text kept 90 days. Interface and stories in the person's language from day one.
 - 2026-10-31 — Product reshaped after two independent evaluations and the owner's review: a plan-builder for dates and companions, not a mood walk. Adopted: the six-question request, the scout layer with a per-city cache of pre-made walks, "no story, no stop", opening hours and weather in selection, companions as a pace profile, the map and waiting design, stories as one expandable line, walks as shareable pages, the footnoted walk, "around me" on the phone, a real exportable trial with sign-in afterwards. See Product.
 - 2026-10-31 — Dependabot handles minors and patches only; majors are moved by hand (Node to the next LTS, and TypeScript, ESLint and Next together, since typescript-eslint lags TypeScript majors). Node 25+ ships no corepack, so pnpm is installed with npm at the version pinned in package.json. Dependabot PRs are merged only when checks are green.
 - 2026-10-31 — Repo is private under GitHub Free, which has no branch protection: a pre-push hook blocks pushes to main until the repo goes public.
@@ -70,4 +77,4 @@ Everything runs in containers. Nothing is installed on any host machine.
 
 ## Status
 
-Milestone 0 (scaffold and pipeline) done: repo, scaffold, test environment, notes, privacy hooks, CI with reviewer and QA agents. Milestones 0 and 1 done (pipeline, test environment, CI, walks without AI). Milestone 2, in progress: product brief and mockups before more code. Then: 3 Claude in the loop (LLM module, interpret from the six questions, curate with "no story, no stop", opening hours, weekday and weather checks, staged progress streaming); 4 scout layer and city cache; 5 UI (request flow, map overlay, the wait, walk pages, around me, stories, footnoted walk); 6 trial, sign-in and plans; 7 hardening and the droplet. Before going public: squash the history and review this file for commercial detail.
+Milestone 0 (scaffold and pipeline) done: repo, scaffold, test environment, notes, privacy hooks, CI with reviewer and QA agents. Milestones 0 and 1 done (pipeline, test environment, CI, walks without AI). Milestone 2 done: product brief and six mockups (request, wait, walk, around me, desktop, footnoted walk). Milestone 3 in progress: the model module, interpret and curate with cited facts, the staged `POST /api/walk` stream are in; a live 90-minute family walk honoured "already seen" and "with kids" and came back within budget. Known: the places search takes 20 to 40 s when many interests are selected; the city cache and narrower selectors address it. Still in 3: opening hours, weekday and weather checks, the events table, walks persisted as pages. Then: 4 scout layer and city cache; 5 UI (request flow, map overlay, the wait, walk pages, around me, stories, footnoted walk); 6 trial, sign-in and plans; 7 hardening and the droplet. Before going public: squash the history and review this file for commercial detail.
