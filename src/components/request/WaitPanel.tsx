@@ -7,7 +7,7 @@ const LABELS: Record<string, string> = { understood: "Understood", searching: "S
 const ORDER = ["understood", "searching", "choosing", "routing"];
 
 /** Four honest stages with their real timings, a rotating fact from the candidates, and a note when it is slow. */
-export default function WaitPanel({ stages, facts, startedAt, error }: { stages: StageState[]; facts: string[]; startedAt: number; error?: string | null }) {
+export default function WaitPanel({ stages, facts, startedAt, error, revealed = 0, total = 0 }: { stages: StageState[]; facts: string[]; startedAt: number; error?: string | null; revealed?: number; total?: number }) {
   const [elapsed, setElapsed] = useState(0);
   const [factIx, setFactIx] = useState(0);
   useEffect(() => { const t = setInterval(() => setElapsed(Math.round((Date.now() - startedAt) / 1000)), 1000); return () => clearInterval(t); }, [startedAt]);
@@ -19,7 +19,7 @@ export default function WaitPanel({ stages, facts, startedAt, error }: { stages:
     if (!d) return "";
     if (s === "understood") return `${(d.start as { label?: string } | undefined)?.label?.split(",")[0] ?? ""}: ${d.minutes} min, ${d.pace} pace, ${(d.interests as string[] | undefined)?.join(", ") ?? ""}`;
     if (s === "searching") return `${d.kept} places worth a look${d.cached ? ", from the city cache" : ""}`;
-    if (s === "choosing") return `${(d.stops as string[] | undefined)?.length ?? 0} stops chosen`;
+    if (s === "choosing") return total ? `${Math.min(revealed, total)} of ${total} stops` : "";
     if (s === "routing") return `${d.totalMinutes} minutes door to door`;
     return "";
   };
@@ -37,7 +37,7 @@ export default function WaitPanel({ stages, facts, startedAt, error }: { stages:
                 : active ? <span className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-ink"><span className="fn-breathe h-2.5 w-2.5 rounded-full bg-ink" /></span>
                 : <span className="h-6 w-6 rounded-full border-2 border-line" />}
               <span className={`flex-1 ${active ? "font-semibold" : ""}`}>{LABELS[s]}{d ? <span className="font-normal text-muted">: {detailFor(s)}</span> : null}</span>
-              {d?.ms !== undefined ? <span className="text-[13px] text-muted">{(d.ms / 1000).toFixed(d.ms < 1000 ? 1 : 0)} s</span> : null}
+              {d?.ms !== undefined ? <span className="text-[13px] text-muted">{d.detail?.cached && d.ms === 0 ? "from cache" : d.ms < 1000 ? "<1 s" : `${Math.round(d.ms / 1000)} s`}</span> : null}
             </li>
           );
         })}
