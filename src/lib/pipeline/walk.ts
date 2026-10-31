@@ -4,13 +4,14 @@ import { pickAndOrder, rank } from "./candidates";
 import { fitToBudget, stepsFor } from "./fit";
 import { googleMapsUrl, gpx } from "./export";
 import { Intent, PACE_MPS, SELECTORS } from "./intent";
+import type { Weather } from "../providers/openmeteo";
 
 export type Walk = {
   title: string;
   summary: string;
   start: LatLng & { label: string };
   end: (LatLng & { label: string }) | null;
-  stops: { id: string; name: string; category: string; lat: number; lon: number; facts: string[]; hook: string; story: string; why: string }[];
+  stops: { id: string; name: string; category: string; lat: number; lon: number; facts: string[]; hook: string; story: string; why: string; arrival?: string; open?: "open" | "closed" | "unknown"; hoursNote?: string }[];
   totalMinutes: number;
   walkingMinutes: number;
   distanceM: number;
@@ -20,6 +21,8 @@ export type Walk = {
   gpx: string;
   candidatesConsidered: number;
   language: string;
+  startsAt?: string;
+  weather?: Weather | null;
 };
 
 export type Providers = { geocoder: Geocoder; places: PlacesProvider; router: Router };
