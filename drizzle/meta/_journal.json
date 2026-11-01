@@ -36,6 +36,13 @@
       "when": 1793535615291,
       "tag": "0004_perpetual_kree",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793540119118,
+      "tag": "0005_purple_captain_universe",
+      "breakpoints": true
     }
   ]
 }

@@ -53,6 +53,13 @@ export const loginCodes = pgTable("login_codes", {
   usedAt: timestamp("used_at", { withTimezone: true }),
 }, (t) => [index("login_codes_email_idx").on(t.emailKey, t.createdAt)]);
 
+/** The owner's marks on records (feedback done, when the mirror was pulled): kept in the local database, so they survive a fresh pull. */
+export const adminMarks = pgTable("admin_marks", {
+  kind: text("kind").notNull(),
+  key: text("key").notNull(),
+  ts: timestamp("ts", { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [primaryKey({ columns: [t.kind, t.key] })]);
+
 /** Stripe events already applied, so a redelivered webhook changes nothing twice. */
 export const stripeEvents = pgTable("stripe_events", {
   id: text("id").primaryKey(),
