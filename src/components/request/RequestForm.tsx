@@ -108,9 +108,9 @@ export default function RequestForm({ onSubmit, busy, initial, startFrom }: { on
   return (
     <form className="flex flex-col gap-7" onSubmit={(e) => {
       e.preventDefault();
-      if (phone && step === 0 && f.start.trim().length < 2) { setNudge("Add a start to continue."); return; }
+      if (phone && step === 0 && f.start.trim().length < 2) { setNudge("Add a start to continue."); document.getElementById("start")?.focus(); return; }
       if (phone && step === 3 && !f.interests.length) { setNudge("Pick at least one thing you love."); return; }
-      if (!phone && !canSubmit) { setNudge(f.start.trim().length < 2 ? "Add a start to continue." : "Pick at least one thing you love."); return; }
+      if (!phone && !canSubmit) { const noStart = f.start.trim().length < 2; setNudge(noStart ? "Add a start to continue." : "Pick at least one thing you love."); (noStart ? document.getElementById("start") : document.querySelector<HTMLElement>("[aria-label=\"Interests\"] button"))?.focus(); return; }
       setNudge(null);
       if (phone && step < STEPS.length - 1) { setDir("in"); setStep(step + 1); } else submit();
     }} aria-busy={busy}>
@@ -126,7 +126,7 @@ export default function RequestForm({ onSubmit, busy, initial, startFrom }: { on
         <section className={`flex flex-col gap-4 ${stepAnim}`} aria-labelledby="q-where">
           <h2 id="q-where" className={h2}>Where?</h2>
           <div className="flex gap-2">
-            <label className="flex-1"><span className="sr-only">Start</span><input className={input} placeholder="Start: a place, an address, or use your location" value={f.start} onChange={(e) => set("start", e.target.value)} autoComplete="off" required /></label>
+            <label className="flex-1"><span className="sr-only">Start</span><input id="start" name="start" enterKeyHint="next" className={input} placeholder="Start: a place, an address, or use your location…" value={f.start} onChange={(e) => set("start", e.target.value)} autoComplete="off" required /></label>
             <button type="button" onClick={locate} className="flex min-h-12 min-w-12 items-center justify-center rounded-xl border-[1.5px] border-line text-ink" aria-label="Use my location" disabled={locating}><Icon.locate /></button>
           </div>
           {locateNote ? <p role="alert" className="rounded-xl bg-soft px-4 py-3 text-[14px] font-medium text-amber">{locateNote}</p> : null}
@@ -135,7 +135,7 @@ export default function RequestForm({ onSubmit, busy, initial, startFrom }: { on
               <button type="button" key={k} className={chip(f.endKind === k)} aria-pressed={f.endKind === k} onClick={() => set("endKind", k)}>{l}</button>
             ))}
           </div>
-          {f.endKind === "place" ? <input className={input} placeholder="End: the place to finish at, the thoughtful way" value={f.endPlace} onChange={(e) => set("endPlace", e.target.value)} aria-label="End place" /> : null}
+          {f.endKind === "place" ? <input name="end" className={input} placeholder="End: the place to finish at, the thoughtful way…" value={f.endPlace} onChange={(e) => set("endPlace", e.target.value)} aria-label="End place" /> : null}
         </section>
       ) : null}
 
@@ -179,8 +179,8 @@ export default function RequestForm({ onSubmit, busy, initial, startFrom }: { on
           <h2 id="q-when" className={h2}>When?</h2>
           <div className="flex flex-wrap gap-2">
             <button type="button" className={chip(!f.date)} aria-pressed={!f.date} onClick={() => { set("date", ""); set("time", ""); }}>Now</button>
-            <label className="flex flex-col gap-1 text-[13px] font-medium text-muted">Day<input type="date" className={`${input} w-auto`} value={f.date} onChange={(e) => set("date", e.target.value)} /></label>
-            <label className="flex flex-col gap-1 text-[13px] font-medium text-muted">Time<input type="time" className={`${input} w-auto`} value={f.time} onChange={(e) => set("time", e.target.value)} disabled={!f.date} /></label>
+            <label className="flex flex-col gap-1 text-[13px] font-medium text-muted">Day<input type="date" name="date" className={`${input} w-auto`} value={f.date} onChange={(e) => set("date", e.target.value)} /></label>
+            <label className="flex flex-col gap-1 text-[13px] font-medium text-muted">Time<input type="time" name="time" className={`${input} w-auto`} value={f.time} onChange={(e) => set("time", e.target.value)} disabled={!f.date} /></label>
           </div>
           <p className="text-[14px] text-muted">So opening hours and the weather match the day.</p>
         </section>
@@ -189,13 +189,13 @@ export default function RequestForm({ onSubmit, busy, initial, startFrom }: { on
       {show(5) ? (
         <section className={`flex flex-col gap-4 ${stepAnim}`} aria-labelledby="q-else">
           <h2 id="q-else" className={h2}>Anything else?</h2>
-          <input className={input} placeholder="For example: avoid busy roads, end near a pub, we have seen the abbey…" value={f.notes} onChange={(e) => set("notes", e.target.value)} maxLength={500} aria-label="Anything else" />
+          <input name="notes" autoComplete="off" enterKeyHint="go" className={input} placeholder="For example: avoid busy roads, end near a pub, we have seen the abbey…" value={f.notes} onChange={(e) => set("notes", e.target.value)} maxLength={500} aria-label="Anything else" />
         </section>
       ) : null}
 
       {nudge ? <p role="alert" className="rounded-xl bg-soft px-4 py-3 text-[14px] font-medium text-amber">{nudge}</p> : null}
       <div className="mt-auto flex gap-3">
-        {phone && step > 0 ? <button type="button" className="min-h-[52px] flex-1 rounded-2xl border-2 border-line font-semibold" onClick={() => { setNudge(null); setDir("back"); setStep(step - 1); }}>Back</button> : null}
+        {phone && step > 0 ? <button type="button" className="min-h-[52px] flex-1 rounded-2xl border-2 border-line font-semibold hover:bg-soft" onClick={() => { setNudge(null); setDir("back"); setStep(step - 1); }}>Back</button> : null}
         <button type="submit" className="min-h-[52px] flex-[2] rounded-2xl bg-text font-semibold text-paper disabled:opacity-40" disabled={busy}>
           {phone && step < STEPS.length - 1 ? `Next: ${STEPS[step + 1].toLowerCase()}` : busy ? "Building…" : "Build my walk"}
         </button>
