@@ -1,0 +1,10 @@
+# Private meta-search for the scout layer: JSON answers on, the rate limiter off (only the app talks to it).
+# The secret comes from SEARXNG_SECRET in the environment.
+use_default_settings: true
+server:
+  limiter: false
+  image_proxy: false
+search:
+  formats:
+    - html
+    - json

@@ -1,0 +1,85 @@
+# Production: one server, five containers, one open door (Caddy on 80 and 443).
+# The app image is built by CI on every merge to main and pulled by deploy/update.sh; nothing is built here.
+# Only LiteLLM holds the model provider's key; the app holds a budget-capped LiteLLM key.
+name: footnote
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      SITE_HOST: ${SITE_HOST}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+    restart: unless-stopped
+
+  app:
+    image: ${APP_IMAGE}
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://footnote:${POSTGRES_PASSWORD}@db:5432/footnote
+      LLM_BASE_URL: http://litellm:4000/v1
+      SEARXNG_URL: http://searxng:8080
+      ADMIN_UI: "off"
+    volumes:
+      - ./data/app:/app/data
+    depends_on:
+      db:
+        condition: service_healthy
+      litellm:
+        condition: service_started
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: footnote
+      POSTGRES_DB: footnote
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+      - ./deploy/db-init.sql:/docker-entrypoint-initdb.d/10-litellm.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U footnote -d footnote"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  litellm:
+    image: ghcr.io/berriai/litellm:main-stable
+    command: ["--config", "/app/config.yaml", "--port", "4000"]
+    ports:
+      - "127.0.0.1:4000:4000"  # the host only, for the one-time key generation
+    environment:
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY}
+      LITELLM_SALT_KEY: ${LITELLM_SALT_KEY}
+      DATABASE_URL: postgresql://footnote:${POSTGRES_PASSWORD}@db:5432/litellm
+      STORE_MODEL_IN_DB: "False"
+    volumes:
+      - ./deploy/litellm.yaml:/app/config.yaml:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  searxng:
+    image: searxng/searxng:latest
+    environment:
+      SEARXNG_SECRET: ${SEARXNG_SECRET}
+      SEARXNG_BASE_URL: http://searxng:8080/
+    volumes:
+      - ./deploy/searxng:/etc/searxng:ro
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:
