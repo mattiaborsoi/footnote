@@ -7,6 +7,8 @@ import RequestForm, { type FormState, type toRequest } from "@/components/reques
 import WaitPanel, { type StageState } from "@/components/request/WaitPanel";
 import { Icon } from "@/components/icons";
 import Logo from "@/components/Logo";
+import AccountChip from "@/components/account/AccountChip";
+import { rememberWalk } from "@/lib/client/walks";
 import { readSse } from "@/lib/client/sse";
 import { sessionId, track } from "@/lib/client/events";
 
@@ -22,6 +24,7 @@ export default function Planner({ initial, tailorOf }: { initial?: Partial<FormS
   const [stages, setStages] = useState<StageState[]>([]);
   const [facts, setFacts] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [limit, setLimit] = useState<{ message: string; next: "signin" | "plans" | null; plan: string } | null>(null);
   const [cands, setCands] = useState<Cand[]>([]);
   const [chosen, setChosen] = useState<string[]>([]);
   const [box, setBox] = useState<Box | null>(null);
@@ -33,7 +36,7 @@ export default function Planner({ initial, tailorOf }: { initial?: Partial<FormS
   const [startedAt, setStartedAt] = useState(0);
 
   const submit = useCallback(async (req: Req) => {
-    setBusy(true); setError(null); setStages([]); setFacts([]); setCands([]); setChosen([]); setBox(null); setStart(null); setEnd(null); setSnakes([]); setConsidered([]); setRevealed(0);
+    setBusy(true); setError(null); setLimit(null); setStages([]); setFacts([]); setCands([]); setChosen([]); setBox(null); setStart(null); setEnd(null); setSnakes([]); setConsidered([]); setRevealed(0);
     const t0 = Date.now();
     setStartedAt(t0);
     try {
@@ -63,11 +66,12 @@ export default function Planner({ initial, tailorOf }: { initial?: Partial<FormS
         } else if (event === "walk") {
           const w = data as { id?: string | null; totalMinutes: number };
           track("walk.received", { ms: Date.now() - t0, totalMinutes: w.totalMinutes }, w.id ?? undefined);
-          if (w.id) router.push(`/w/${w.id}`);
+          if (w.id) { rememberWalk(w.id); router.push(`/w/${w.id}`); }
           else { setError("The walk was built but could not be saved."); setBusy(false); }
         } else if (event === "error") {
-          setError((data as { message: string }).message);
-          track("walk.failed", { ms: Date.now() - t0 });
+          const d = data as { message: string; code?: string; next?: "signin" | "plans" | null; allowance?: { plan?: string } };
+          if (d.code === "limit") { setLimit({ message: d.message, next: d.next ?? null, plan: d.allowance?.plan ?? "none" }); track("walk.limited_ui", { next: d.next ?? "" }); }
+          else { setError(d.message); track("walk.failed", { ms: Date.now() - t0 }); }
           setBusy(false);
         }
       });
@@ -84,10 +88,24 @@ export default function Planner({ initial, tailorOf }: { initial?: Partial<FormS
       <section className="flex flex-col gap-6 px-6 py-8 md:w-[520px] md:flex-none md:overflow-y-auto md:px-10 md:py-10 lg:w-[600px]">
         <header className="flex items-center justify-between">
           <Logo />
+          <div className="flex items-center gap-2">
+          <AccountChip />
           {tailorOf ? <span className="text-[13px] text-muted">Tailoring a ready-made walk</span> : <Link href="/around" className="flex min-h-10 items-center gap-2 rounded-full border-2 border-line px-3 text-[14px] font-semibold text-ink"><Icon.locate width={16} height={16} />Around me</Link>}
+          </div>
         </header>
+        {limit ? (
+          <section className="flex flex-col gap-4 rounded-2xl bg-soft p-5" role="status">
+            <h2 className="font-serif text-[24px] leading-tight">{limit.plan === "none" ? "That was your free walk" : "No walks left on this pass"}</h2>
+            <p className="text-[15px] text-muted">{limit.message}</p>
+            <div className="flex flex-wrap gap-3">
+              {limit.next === "signin" ? <Link href="/signin?next=/" className="flex min-h-12 items-center rounded-xl bg-text px-4 font-semibold text-paper">Sign in</Link> : null}
+              <Link href="/plans" className={`flex min-h-12 items-center rounded-xl px-4 font-semibold ${limit.next === "signin" ? "border-2 border-line" : "bg-text text-paper"}`}>See the passes</Link>
+              <button type="button" className="flex min-h-12 items-center rounded-xl border-2 border-line px-4 font-semibold" onClick={() => setLimit(null)}>Back</button>
+            </div>
+          </section>
+        ) : null}
         {busy || error ? <WaitPanel stages={stages} facts={facts} startedAt={startedAt} error={error} revealed={revealed} total={chosen.length} /> : null}
-        <div className={busy ? "hidden md:block md:opacity-50" : ""}>
+        <div className={busy ? "hidden md:block md:opacity-50" : limit ? "hidden" : ""}>
           <RequestForm onSubmit={submit} busy={busy} initial={initial} />
         </div>
         {error ? <button type="button" className="min-h-12 rounded-2xl border-2 border-line font-semibold" onClick={() => setError(null)}>Try again</button> : null}

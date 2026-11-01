@@ -3,6 +3,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import Feedback from "@/components/Feedback";
+import KeepWalk from "@/components/account/KeepWalk";
 import { Icon } from "@/components/icons";
 import { track, whenString } from "@/lib/client/events";
 import { colorFor } from "@/lib/client/colors";
@@ -11,7 +12,7 @@ import type { StoredWalk } from "@/lib/walks";
 const WalkMap = dynamic(() => import("@/components/map/WalkMap"), { ssr: false });
 
 /** The walk as a page: the map overlay above, the stops below, with exports, a date re-check, tailoring and feedback. */
-export default function WalkView({ initial }: { initial: StoredWalk }) {
+export default function WalkView({ initial, owned = false }: { initial: StoredWalk; owned?: boolean }) {
   const [walk, setWalk] = useState(initial);
   const [active, setActive] = useState<string | null>(initial.stops[0]?.id ?? null);
   const [open, setOpen] = useState<Record<string, boolean>>(() => (initial.stops[0] ? { [initial.stops[0].id]: true } : {}));
@@ -59,6 +60,7 @@ export default function WalkView({ initial }: { initial: StoredWalk }) {
           <a href={gpxHref} download={`${walk.title.replace(/[^\w]+/g, "-").toLowerCase()}.gpx`} onClick={() => track("walk.export", { kind: "gpx" }, walk.id)} className="flex min-h-12 items-center rounded-xl border-2 border-line px-4 font-semibold">GPX</a>
           <button type="button" onClick={copy} className={`flex min-h-12 items-center rounded-xl border-2 px-4 font-semibold transition-colors ${copied ? "border-[#2e7d32] text-[#2e7d32]" : "border-line"}`} aria-live="polite">{copied ? "Copied ✓" : "Copy link"}</button>
           <Link href={`/tailor?of=${walk.id}`} className="flex min-h-12 items-center rounded-xl border-2 border-line px-4 font-semibold">Tailor it</Link>
+          <KeepWalk walkId={walk.id} owned={owned} />
           <Link href={`/w/${walk.id}/footnoted`} onClick={() => track("walk.footnoted", {}, walk.id)} className="flex min-h-12 items-center rounded-xl border-2 border-line px-4 font-semibold">Footnoted page</Link>
         </div>
 
