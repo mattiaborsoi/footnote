@@ -1,9 +1,8 @@
 name: checks
 
+# Pull requests only: a merge is checked by the release build, and a cancelled run on main is one more email.
 on:
   pull_request:
-  push:
-    branches: [main]
 
 concurrency:
   group: checks-${{ github.ref }}
