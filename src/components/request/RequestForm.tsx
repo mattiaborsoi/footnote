@@ -75,6 +75,7 @@ export default function RequestForm({ onSubmit, busy, initial }: { onSubmit: (re
   const [phone, setPhone] = useState(false);
   const [locating, setLocating] = useState(false);
   const [nudge, setNudge] = useState<string | null>(null);
+  const [locateNote, setLocateNote] = useState<string | null>(null);
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 767px)");
     const on = () => setPhone(mq.matches);
@@ -89,11 +90,12 @@ export default function RequestForm({ onSubmit, busy, initial }: { onSubmit: (re
   const show = (i: number) => !phone || step === i;
 
   const locate = () => {
-    if (!navigator.geolocation) return;
+    if (!navigator.geolocation || !window.isSecureContext) { setLocateNote("Your browser only shares location on a secure (https) address or localhost. Type a place instead."); return; }
+    setLocateNote(null);
     setLocating(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => { set("start", `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`); setLocating(false); track("request.locate"); },
-      () => setLocating(false), { timeout: 8000 },
+      () => { setLocating(false); setLocateNote("Location was refused or timed out. Allow it in the browser, or type a place."); }, { timeout: 8000 },
     );
   };
   const submit = () => { if (!canSubmit) return; track("request.submit", { minutes: f.minutes, interests: f.interests.length, companions: f.companions.join(","), notes: f.notes.trim().length > 0 }); onSubmit(toRequest(f)); };
@@ -122,6 +124,7 @@ export default function RequestForm({ onSubmit, busy, initial }: { onSubmit: (re
             <label className="flex-1"><span className="sr-only">Start</span><input className={input} placeholder="Start: a place, an address, or use your location" value={f.start} onChange={(e) => set("start", e.target.value)} autoComplete="off" required /></label>
             <button type="button" onClick={locate} className="flex min-h-12 min-w-12 items-center justify-center rounded-xl border-[1.5px] border-line text-ink" aria-label="Use my location" disabled={locating}><Icon.locate /></button>
           </div>
+          {locateNote ? <p role="alert" className="rounded-xl bg-soft px-4 py-3 text-[14px] font-medium text-amber">{locateNote}</p> : null}
           <div className="flex flex-wrap gap-2" role="group" aria-label="End">
             {([["anywhere", "Anywhere, surprise me"], ["same", "Back to the start"], ["transport", "Near a station or stop"], ["place", "A place"]] as const).map(([k, l]) => (
               <button type="button" key={k} className={chip(f.endKind === k)} aria-pressed={f.endKind === k} onClick={() => set("endKind", k)}>{l}</button>
