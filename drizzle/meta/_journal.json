@@ -29,6 +29,13 @@
       "when": 1793481390178,
       "tag": "0003_organic_the_fallen",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793535615291,
+      "tag": "0004_perpetual_kree",
+      "breakpoints": true
     }
   ]
 }

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import WalkView from "@/components/walk/WalkView";
+import { currentUser } from "@/lib/auth/session";
 import { ID_PATTERN } from "@/lib/ids";
 import { loadWalk } from "@/lib/walks";
 
@@ -19,7 +20,8 @@ export default function WalkPage({ params }: { params: Promise<{ id: string }> }
 async function WalkContent({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   if (!ID_PATTERN.test(id)) notFound();
-  const walk = await loadWalk(id);
+  const [walk, user] = await Promise.all([loadWalk(id), currentUser()]);
   if (!walk) notFound();
-  return <WalkView initial={walk} />;
+  const { ownerId, ...rest } = walk;
+  return <WalkView initial={rest} owned={!!user && ownerId === user.id} />;
 }
