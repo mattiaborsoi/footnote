@@ -2,7 +2,7 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import RequestForm, { type FormState, type toRequest } from "@/components/request/RequestForm";
 import WaitPanel, { type StageState } from "@/components/request/WaitPanel";
 import { Icon } from "@/components/icons";
@@ -34,6 +34,10 @@ export default function Planner({ initial, tailorOf }: { initial?: Partial<FormS
   const [revealed, setRevealed] = useState(0);
   const [end, setEnd] = useState<{ lat: number; lon: number } | null>(null);
   const [startedAt, setStartedAt] = useState(0);
+  const [cities, setCities] = useState<{ id: string; name: string; lat: number; lon: number }[]>([]);
+  const [startFrom, setStartFrom] = useState<string | undefined>(undefined);
+  useEffect(() => { fetch("/api/cities").then((r) => r.json()).then((j: { cities?: typeof cities }) => setCities(j.cities ?? [])).catch(() => null); }, []);
+  const pickCity = useCallback((name: string) => { setStartFrom(name); track("request.city_pin", {}); }, []);
 
   const submit = useCallback(async (req: Req) => {
     setBusy(true); setError(null); setLimit(null); setStages([]); setFacts([]); setCands([]); setChosen([]); setBox(null); setStart(null); setEnd(null); setSnakes([]); setConsidered([]); setRevealed(0);
@@ -95,8 +99,8 @@ export default function Planner({ initial, tailorOf }: { initial?: Partial<FormS
         </header>
         {limit ? (
           <section className="flex flex-col gap-4 rounded-2xl bg-soft p-5" role="status">
-            <h2 className="font-serif text-[24px] leading-tight">{limit.plan === "none" ? "That was your free walk" : "No walks left on this pass"}</h2>
-            <p className="text-[15px] text-muted">{limit.message} Every walk is built fresh by a large model and a router, which costs real computing; a pass covers a set number of them, and that is the whole business.</p>
+            <h2 className="font-serif text-[24px] leading-tight">{limit.plan === "none" ? "That was your free walk" : "This pass is used up"}</h2>
+            <p className="text-[15px] text-muted">{limit.message}</p>
             <div className="flex flex-wrap gap-3">
               {limit.next === "signin" ? <Link href="/signin?next=/" className="flex min-h-12 items-center rounded-xl bg-text px-4 font-semibold text-paper">Sign in</Link> : null}
               <Link href="/plans" className={`flex min-h-12 items-center rounded-xl px-4 font-semibold ${limit.next === "signin" ? "border-2 border-line" : "bg-text text-paper"}`}>See the passes</Link>
@@ -106,12 +110,18 @@ export default function Planner({ initial, tailorOf }: { initial?: Partial<FormS
         ) : null}
         {busy || error ? <WaitPanel stages={stages} facts={facts} startedAt={startedAt} error={error} revealed={revealed} total={chosen.length} /> : null}
         <div className={busy ? "hidden md:block md:opacity-50" : limit ? "hidden" : ""}>
-          <RequestForm onSubmit={submit} busy={busy} initial={initial} />
+          <RequestForm onSubmit={submit} busy={busy} initial={initial} startFrom={startFrom} />
         </div>
         {error ? <button type="button" className="min-h-12 rounded-2xl border-2 border-line font-semibold" onClick={() => setError(null)}>Try again</button> : null}
       </section>
       <aside className={`relative flex-1 bg-map md:sticky md:top-0 md:block md:h-dvh md:self-start ${busy || error ? "min-h-[320px]" : "hidden"}`} aria-label="Map">
-        {start ? <WalkMap start={start} end={end} candidates={cands} stops={chosenStops} searchBox={box} snakes={busy ? snakes : []} considered={considered} dim={busy && !chosen.length} className="absolute inset-0" /> : null}
+        {start ? <WalkMap start={start} end={end} candidates={cands} stops={chosenStops} searchBox={box} snakes={busy ? snakes : []} considered={considered} dim={busy && !chosen.length} className="absolute inset-0" />
+          : !busy && cities.length ? (
+            <>
+              <WalkMap cities={cities} onCityClick={pickCity} className="absolute inset-0" />
+              <p className="pointer-events-none absolute left-3 top-3 rounded-full bg-white px-4 py-2 text-[13px] font-medium text-[#141413] shadow">Cities we know well. Tap one to start there.</p>
+            </>
+          ) : null}
       </aside>
     </div>
   );

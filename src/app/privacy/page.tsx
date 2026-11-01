@@ -25,7 +25,7 @@ export default function PrivacyPage() {
       <p>Map, geocoding, routing and weather services receive the coordinates needed to answer; the model provider receives your request and the candidate places, never your email. Stripe receives what a payment needs.</p>
       <h2 className="font-serif text-[22px]">Your rights</h2>
       <p>Under UK GDPR you can ask for a copy of what we hold about you, or for it to be deleted. Write to us through the feedback button and we will answer within a month.</p>
-      <p><Link className="underline" href="/terms">Terms</Link> · <Link className="underline" href="/">Home</Link></p>
+      <p className="flex gap-4"><Link className="underline" href="/terms">Terms</Link><Link className="underline" href="/">Home</Link></p>
     </main>
   );
 }

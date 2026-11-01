@@ -45,7 +45,7 @@ export default function AroundView() {
         <WalkMap start={pos} stops={stops} spokes={spokes} activeId={active} onStopClick={setActive} className="absolute inset-0" />
         <div className="pointer-events-none absolute left-3 top-3 flex gap-2">
           <Link href="/" className="pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#141413] shadow" aria-label="Back"><Icon.back width={20} height={20} /></Link>
-          <span className="pointer-events-auto flex min-h-10 items-center gap-2 rounded-full bg-white px-4 text-[14px] font-semibold text-[#141413] shadow"><Icon.locate width={16} height={16} className="text-[#1e3a8a]" />Around me · 45 min · now</span>
+          <span className="pointer-events-auto flex min-h-10 items-center gap-2 rounded-full bg-white px-4 text-[14px] font-semibold text-[#141413] shadow"><Icon.locate width={16} height={16} className="text-[#1e3a8a]" />Around me, 45 min, now</span>
         </div>
       </aside>
       <main className="flex flex-col gap-4 px-6 py-6 md:w-[520px] md:flex-none md:px-10 md:py-10">
@@ -63,7 +63,7 @@ export default function AroundView() {
         <ol className="flex flex-col gap-3">
           {(options ?? []).map((o, i) => (
             <li key={o.id} className={`flex flex-col gap-2 rounded-2xl border-2 p-4 ${active === o.id ? "border-text" : "border-line"}`} onMouseEnter={() => setActive(o.id)}>
-              <div className="flex justify-between text-[13px] text-muted"><span>{i + 1} · {o.category}</span><span className="font-semibold text-ink">{o.minutes} min{o.hoursNote ? ` · ${o.hoursNote}` : ""}</span></div>
+              <div className="flex justify-between text-[13px] text-muted"><span>{i + 1}. {o.category}</span><span className="font-semibold text-ink">{o.minutes} min{o.hoursNote ? ` · ${o.hoursNote}` : ""}</span></div>
               <h2 className="font-serif text-[20px]">{o.name}</h2>
               {o.hook ? <p className="text-[14px] leading-snug text-muted">{o.hook}</p> : null}
               <div className="mt-1 flex gap-2">

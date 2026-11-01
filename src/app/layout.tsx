@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   description: "A walk designed around you.",
   icons: { icon: "/icon.svg" },
 };
-export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#ffffff" };
+export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: [{ media: "(prefers-color-scheme: light)", color: "#ffffff" }, { media: "(prefers-color-scheme: dark)", color: "#141413" }] };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (

@@ -23,13 +23,13 @@ export function decide(user: User | null, used: number, now = new Date()): Allow
     const plan = user.plan as Plan;
     const limit = planWalks(plan);
     const ok = used < limit;
-    return { allowed: ok, used, limit, plan, endsAt: user.planEndsAt.toISOString(), next: ok ? null : "plans", message: ok ? "" : `You have used the ${limit} walks of this ${plan === "week" ? "week pass" : "month"}.` };
+    return { allowed: ok, used, limit, plan, endsAt: user.planEndsAt.toISOString(), next: ok ? null : "plans", message: ok ? "" : `You have used all ${limit} walks of this ${plan === "week" ? "week pass" : "month"}. A new pass starts you again.` };
   }
   const limit = trialWalks();
   const ok = used < limit;
   return {
     allowed: ok, used, limit, plan: "none", endsAt: null, next: ok ? null : user ? "plans" : "signin",
-    message: ok ? "" : user ? "Your free walk is used. A pass unlocks more." : "Your free walk is used. Sign in to keep it, and pick a pass for more.",
+    message: ok ? "" : user ? "Every walk is written for you from scratch, and that costs us money to make. The next ones come with a pass. No adverts, nothing sold on." : "Sign in to keep it. Every walk is written for you from scratch, and that costs us money to make, so the next ones come with a pass. No adverts, nothing sold on.",
   };
 }
 
