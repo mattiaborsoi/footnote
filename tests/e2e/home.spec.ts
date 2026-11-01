@@ -4,12 +4,21 @@ import { mockTiles } from "./fixtures";
 test.beforeEach(async ({ page }) => { await mockTiles(page); });
 
 test("the request cannot be built without a start and an interest", async ({ page, isMobile }) => {
+  let sent = 0;
+  await page.route("**/api/walk", (route) => { sent += 1; return route.abort(); });
   await page.goto("/");
   await expect(page.getByText(/walk from/).first()).toBeVisible();
   const submit = page.getByRole("button", { name: isMobile ? /^next:/i : /build my walk/i });
-  await expect(submit).toBeDisabled();
+  await expect(submit).toBeEnabled(); // the button explains instead of greying out
+  await submit.click();
+  await expect(page.getByRole("textbox", { name: /start/i })).toBeFocused(); // the start is required
   await page.getByRole("textbox", { name: /start/i }).fill("Abbey");
-  await expect(submit).toBeEnabled();
+  if (!isMobile) {
+    await page.getByRole("button", { name: "History" }).click(); // deselect the default interest
+    await submit.click();
+    await expect(page.getByText(/pick at least one thing you love/i)).toBeVisible();
+    expect(sent).toBe(0);
+  }
 });
 
 test("the summary sentence rewrites itself as you choose", async ({ page, isMobile }) => {

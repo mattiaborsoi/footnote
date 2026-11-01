@@ -37,3 +37,12 @@ it("arrivalTimes adds legs and dwell, scaled for pace", () => {
   const slow = arrivalTimes(sat14("14:00"), route, 1, "relaxed");
   expect(slow[0].getTime()).toBeGreaterThan(a[0].getTime());
 });
+
+import { readsAsSentence } from "@/lib/pipeline/plan";
+it("readsAsSentence keeps prose and drops tag values", () => {
+  expect(readsAsSentence('Recommended on "A blog": the roaster that put this city on the coffee map')).toBe(true);
+  expect(readsAsSentence("Description: a riverside garden laid out as a private pleasure ground")).toBe(true);
+  expect(readsAsSentence("Heritage: 2")).toBe(false);
+  expect(readsAsSentence("Opening hours: Apr-Oct Mo-Su 10:00-18:00")).toBe(false);
+  expect(readsAsSentence("Description: short")).toBe(false);
+});
