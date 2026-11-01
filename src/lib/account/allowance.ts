@@ -9,6 +9,8 @@ export type Allowance = { allowed: boolean; used: number; limit: number; plan: P
 const num = (name: string, fallback: number) => { const n = Number(process.env[name]); return Number.isFinite(n) && n > 0 ? n : fallback; };
 /** Free walks before a pass; and each pass's "up to N walks", sized from measured cost and changed without a deploy. */
 export const trialWalks = () => num("TRIAL_WALKS", 1);
+/** What one walk costs to make, as shown to people: computing and services at our volume, kept honest by hand from measured cost. */
+export const walkCostLabel = () => process.env.WALK_COST_LABEL ?? "about 40p";
 export const planWalks = (plan: Plan) => (plan === "week" ? num("PLAN_WEEK_WALKS", 8) : plan === "month" ? num("PLAN_MONTH_WALKS", 25) : trialWalks());
 
 export function hasActivePlan(user: User | null, now = new Date()): user is User & { planEndsAt: Date } {

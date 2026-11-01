@@ -17,8 +17,12 @@ test("the passes page says the number of walks and never 'unlimited'", async ({ 
   await page.goto("/plans");
   await expect(page.getByRole("heading", { name: /week pass/i })).toBeVisible();
   await expect(page.getByRole("heading", { name: /monthly/i })).toBeVisible();
-  await expect(page.getByText(/up to/i).first()).toBeVisible();
-  await expect(page.getByText(/unlimited/i)).toHaveCount(0);
+  const cards = page.locator(".grid section");
+  await expect(cards).toHaveCount(2);
+  for (const card of await cards.all()) {
+    await expect(card.getByText(/up to \d+ walks/i)).toBeVisible();
+    await expect(card.getByText(/unlimited/i)).toHaveCount(0); // the page explains the word; the offers never use it
+  }
 });
 
 test("the account page sends a stranger to sign in", async ({ page }) => {

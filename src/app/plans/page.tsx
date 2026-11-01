@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Logo from "@/components/Logo";
 import PlanButton from "@/components/account/PlanButton";
-import { trialWalks } from "@/lib/account/allowance";
+import { trialWalks, walkCostLabel } from "@/lib/account/allowance";
 import { paymentsReady, plans } from "@/lib/billing/stripe";
 
 export const metadata: Metadata = { title: "Passes" };
@@ -18,6 +18,10 @@ export default function PlansPage() {
         <h1 className="font-serif text-[34px] leading-[1.1] tracking-tight">A pass for the walks ahead</h1>
         <p className="text-[16px] text-muted">The first {trial === 1 ? "walk is" : `${trial} walks are`} free. Each pass covers up to a set number of walks: every walk costs real computing, so we say the number rather than promise &ldquo;unlimited&rdquo;.</p>
       </header>
+      <section className="flex flex-col gap-2 rounded-2xl bg-soft p-5 text-[15px]">
+        <h2 className="font-serif text-[20px]">Why a walk costs money</h2>
+        <p>Each walk is built fresh: a large model reads up to seventy real places and their facts and writes the stories, a router walks every leg, and the hours and weather are checked for your day. At our volume that is {walkCostLabel()} of computing and services per walk. The rest of a pass pays for the servers, the scouting that keeps each city&apos;s recommendations fresh, and the people who keep it right. No adverts, no selling of data: the passes are the whole business.</p>
+      </section>
       <div className="grid gap-4 sm:grid-cols-2">
         {plans().map((p) => (
           <section key={p.id} className="flex flex-col gap-3 rounded-2xl border-2 border-line p-5">
