@@ -3,9 +3,11 @@ name: qa
 # Independent QA by an Opus agent: it runs the project, it does not read it for style.
 # It can run Docker and curl and post one report; it cannot edit or push.
 
+# Once per pull request, not on every push: re-run by hand from the Actions tab when a review of a later revision is wanted.
 on:
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
+    types: [opened, ready_for_review]
+  workflow_dispatch:
 
 concurrency:
   group: qa-${{ github.event.pull_request.number }}

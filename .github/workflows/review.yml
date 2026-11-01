@@ -3,9 +3,11 @@ name: review
 # Independent code review by an Opus agent that did not write the code.
 # Read-only tools; it can only post comments.
 
+# Once per pull request, not on every push: re-run by hand from the Actions tab when a review of a later revision is wanted.
 on:
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
+    types: [opened, ready_for_review]
+  workflow_dispatch:
 
 concurrency:
   group: review-${{ github.event.pull_request.number }}
