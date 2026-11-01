@@ -99,8 +99,8 @@ export default function Planner({ initial, tailorOf }: { initial?: Partial<FormS
         </header>
         {limit ? (
           <section className="flex flex-col gap-4 rounded-2xl bg-soft p-5" role="status">
-            <h2 className="font-serif text-[24px] leading-tight">{limit.plan === "none" ? "That was your free walk" : "No walks left on this pass"}</h2>
-            <p className="text-[15px] text-muted">{limit.message} Every walk is built fresh by a large model and a router, which costs real computing; a pass covers a set number of them, and that is the whole business.</p>
+            <h2 className="font-serif text-[24px] leading-tight">{limit.plan === "none" ? "That was your free walk" : "This pass is used up"}</h2>
+            <p className="text-[15px] text-muted">{limit.message}</p>
             <div className="flex flex-wrap gap-3">
               {limit.next === "signin" ? <Link href="/signin?next=/" className="flex min-h-12 items-center rounded-xl bg-text px-4 font-semibold text-paper">Sign in</Link> : null}
               <Link href="/plans" className={`flex min-h-12 items-center rounded-xl px-4 font-semibold ${limit.next === "signin" ? "border-2 border-line" : "bg-text text-paper"}`}>See the passes</Link>
