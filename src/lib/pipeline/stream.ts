@@ -1,4 +1,7 @@
 import { ZodError } from "zod";
+import { allowanceFor } from "../account/allowance";
+import type { User } from "../auth";
+import { allow } from "../ratelimit";
 import { configFromEnv, httpTransport, LlmError } from "../llm/client";
 import { logEvent } from "../log";
 import { nominatim } from "../providers/nominatim";
@@ -9,7 +12,8 @@ import { fingerprint } from "./fingerprint";
 import { planWalk } from "./plan";
 
 /** Build a walk and stream it as server-sent events: `stage` while it builds, then `walk`, or `error`. */
-export function streamWalk(body: Record<string, unknown>, meta: { cityId?: string; fromWalkId?: string } = {}): Response {
+/** `meta.user` (null when signed out) turns the allowance gate on: a cache hit is always free; anything that costs the model counts. */
+export function streamWalk(body: Record<string, unknown>, meta: { cityId?: string; fromWalkId?: string; user?: User | null; ipKey?: string } = {}): Response {
   const enc = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
@@ -25,9 +29,22 @@ export function streamWalk(body: Record<string, unknown>, meta: { cityId?: strin
           send("walk", { ...recent, url: `/w/${recent.id}` });
           return;
         }
+        if (meta.user !== undefined) {
+          const a = await allowanceFor(meta.user, sessionId);
+          if (!a.allowed) {
+            logEvent("walk.limited", { plan: a.plan, used: a.used, limit: a.limit, signedIn: !!meta.user }, { sessionId });
+            send("error", { message: a.message, code: "limit", next: a.next, allowance: a });
+            return;
+          }
+          if (!meta.user && meta.ipKey && !allow(`build-ip:${meta.ipKey}`, 5, 86_400_000)) {
+            logEvent("walk.limited", { plan: "none", reason: "ip", signedIn: false }, { sessionId });
+            send("error", { message: "Too many walks from this connection today. Sign in to continue.", code: "limit", next: "signin" });
+            return;
+          }
+        }
         const cfg = configFromEnv();
         const walk = await planWalk(body, { geocoder: nominatim, places: overpass, router: osrm }, { transport: httpTransport(cfg), models: cfg.models }, (e) => send("stage", e));
-        const id = await saveWalk(walk, body, sessionId, { ...meta, fingerprint: fp }).catch((err) => { console.error("walk not stored", err); return null; });
+        const id = await saveWalk(walk, body, sessionId, { cityId: meta.cityId, fingerprint: fp, userId: meta.user?.id }).catch((err) => { console.error("walk not stored", err); return null; });
         logEvent("walk.served", { stops: walk.stops.length, totalMinutes: walk.totalMinutes, ms: Math.round(performance.now() - started), fromWalkId: meta.fromWalkId ?? null }, { walkId: id, sessionId });
         send("walk", { id, url: id ? `/w/${id}` : null, ...walk });
       } catch (e) {

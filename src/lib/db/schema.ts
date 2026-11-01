@@ -12,7 +12,53 @@ export const walks = pgTable("walks", {
   cityId: text("city_id"),
   preset: text("preset"),
   fingerprint: text("fingerprint"),
-}, (t) => [index("walks_fingerprint_idx").on(t.fingerprint, t.createdAt)]);
+  userId: text("user_id"),
+}, (t) => [index("walks_fingerprint_idx").on(t.fingerprint, t.createdAt), index("walks_user_idx").on(t.userId, t.createdAt)]);
+
+/** A person: one row per normalised email, the plan they are on and the Stripe customer behind it. */
+export const users = pgTable("users", {
+  id: text("id").primaryKey(),
+  email: text("email").notNull(),
+  emailKey: text("email_key").notNull().unique(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).defaultNow().notNull(),
+  language: text("language").notNull().default("en"),
+  stripeCustomerId: text("stripe_customer_id"),
+  plan: text("plan").notNull().default("none"), // none | week | month
+  planStatus: text("plan_status").notNull().default("none"), // none | active | past_due | cancelled
+  planStartsAt: timestamp("plan_starts_at", { withTimezone: true }),
+  planEndsAt: timestamp("plan_ends_at", { withTimezone: true }),
+  subscriptionId: text("subscription_id"),
+});
+
+/** A signed-in browser: the hash of the cookie's token. */
+export const sessions = pgTable("sessions", {
+  tokenHash: text("token_hash").primaryKey(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+}, (t) => [index("sessions_user_idx").on(t.userId)]);
+
+/** One sign-in attempt: a short code typed on the device and a link opened from the email, both hashed, both short-lived. */
+export const loginCodes = pgTable("login_codes", {
+  id: bigserial("id", { mode: "number" }).primaryKey(),
+  emailKey: text("email_key").notNull(),
+  email: text("email").notNull(),
+  codeHash: text("code_hash").notNull(),
+  linkHash: text("link_hash").notNull(),
+  next: text("next"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  attempts: integer("attempts").notNull().default(0),
+  usedAt: timestamp("used_at", { withTimezone: true }),
+}, (t) => [index("login_codes_email_idx").on(t.emailKey, t.createdAt)]);
+
+/** Stripe events already applied, so a redelivered webhook changes nothing twice. */
+export const stripeEvents = pgTable("stripe_events", {
+  id: text("id").primaryKey(),
+  type: text("type").notNull(),
+  ts: timestamp("ts", { withTimezone: true }).defaultNow().notNull(),
+});
 
 /** Product events: what people asked, how long each stage took, what they tapped, what failed. No cookies; ids come from the client. */
 export const events = pgTable(
