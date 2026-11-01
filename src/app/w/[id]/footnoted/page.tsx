@@ -8,7 +8,7 @@ import FootnoteMap from "@/components/walk/FootnoteMap";
 
 const SUP = ["¹", "²", "³", "⁴", "⁵", "⁶", "⁷", "⁸", "⁹", "¹⁰", "¹¹", "¹²"];
 
-export const metadata: Metadata = { title: "Footnoted walk" };
+export const metadata: Metadata = { title: "Footnoted walk", robots: { index: false, follow: false } };
 
 /** The signature page: the route as a thin line, the stops numbered, the notes in small type below. Prints on one sheet. */
 export default function FootnotedPage({ params }: { params: Promise<{ id: string }> }) {
