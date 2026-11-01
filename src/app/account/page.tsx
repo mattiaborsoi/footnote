@@ -30,7 +30,7 @@ async function Body({ searchParams }: { searchParams: Promise<{ checkout?: strin
   return (
     <div className="flex flex-col gap-8">
       <header className="flex flex-col gap-2">
-        <p className="text-[12px] uppercase tracking-[0.2em] text-muted">Your account</p>
+        <p className="text-[14px] text-muted">Your account</p>
         <h1 className="font-serif text-[30px] leading-tight tracking-tight">{user.email}</h1>
       </header>
       {checkout === "done" ? <p role="status" className="rounded-2xl bg-soft px-5 py-4 text-[15px]">Thank you. Your pass is being switched on; if it is not showing yet, give it a few seconds and reload.</p> : null}
@@ -48,11 +48,11 @@ async function Body({ searchParams }: { searchParams: Promise<{ checkout?: strin
         <h2 className="font-serif text-[22px]">Your walks</h2>
         {mine.length ? (
           <ul className="flex flex-col divide-y divide-line">
-            {mine.map((w) => <li key={w.id}><Link href={`/w/${w.id}`} className="flex min-h-12 items-center justify-between gap-4 py-2"><span className="font-medium">{w.title}</span><span className="flex-none text-[13px] text-muted">{w.totalMinutes} min · {day(w.createdAt)}</span></Link></li>)}
+            {mine.map((w) => <li key={w.id}><Link href={`/w/${w.id}`} className="flex min-h-12 items-center justify-between gap-4 py-2"><span className="font-medium">{w.title}</span><span className="flex-none text-[13px] text-muted">{w.totalMinutes} min, {day(w.createdAt)}</span></Link></li>)}
           </ul>
         ) : <p className="text-[15px] text-muted">None kept yet. <Link className="underline" href="/">Plan one</Link>, or open a walk you built and keep it.</p>}
       </section>
-      <p className="text-[13px] text-muted"><Link className="underline" href="/privacy">Privacy</Link> · <Link className="underline" href="/terms">Terms</Link></p>
+      <p className="flex gap-4 text-[13px] text-muted"><Link className="underline" href="/privacy">Privacy</Link><Link className="underline" href="/terms">Terms</Link></p>
     </div>
   );
 }

@@ -35,7 +35,7 @@ export default function PlansPage() {
       </div>
       <section className="flex flex-col gap-2 text-[14px] text-muted">
         <p>Prices include VAT. Payment is taken by Stripe; we never see your card. Walks start straight away, so the 14-day right to cancel a digital purchase is waived once the first walk is built; the monthly plan can be cancelled at any time from your account and runs to the end of the paid month. Before each renewal you get an email.</p>
-        <p><Link className="underline" href="/terms">Terms</Link> · <Link className="underline" href="/privacy">Privacy</Link></p>
+        <p className="flex gap-4"><Link className="underline" href="/terms">Terms</Link><Link className="underline" href="/privacy">Privacy</Link></p>
       </section>
     </main>
   );

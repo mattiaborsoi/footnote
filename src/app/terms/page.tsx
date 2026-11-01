@@ -21,7 +21,7 @@ export default function TermsPage() {
       <p>One account per person. Sign-in is by email; keep your inbox safe. Do not resell walks or scrape the service.</p>
       <h2 className="font-serif text-[22px]">Attribution</h2>
       <p>Map data © OpenStreetMap contributors (ODbL). Stories draw on Wikipedia (CC BY-SA) and the linked sources, which are credited on each stop.</p>
-      <p><Link className="underline" href="/privacy">Privacy</Link> · <Link className="underline" href="/">Home</Link></p>
+      <p className="flex gap-4"><Link className="underline" href="/privacy">Privacy</Link><Link className="underline" href="/">Home</Link></p>
     </main>
   );
 }

@@ -34,7 +34,7 @@ async function CityContent({ params }: { params: Promise<{ id: string }> }) {
           {presets.map((p) => (
             <li key={p.id}>
               <Link href={`/w/${p.id}`} className="flex flex-col gap-1 rounded-2xl border-2 border-line p-5 hover:border-muted">
-                <span className="text-[12px] uppercase tracking-wider text-muted">{p.label} · {p.totalMinutes} min · {(p.distanceM / 1000).toFixed(1)} km · {p.stops} stops</span>
+                <span className="text-[13px] text-muted">{p.label}: {p.totalMinutes} min, {(p.distanceM / 1000).toFixed(1)} km, {p.stops} stops</span>
                 <span className="font-serif text-[24px] leading-tight">{p.title}</span>
                 <span className="text-[14px] text-muted">{p.summary}</span>
               </Link>
