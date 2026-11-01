@@ -1,7 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import { decide, hasActivePlan } from "@/lib/account/allowance";
 import type { User } from "@/lib/auth";
 
+// The rules under test are the repo defaults, whatever the host's environment says (the test machine lifts its own limit).
+beforeAll(() => { vi.stubEnv("TRIAL_WALKS", "1"); vi.stubEnv("PLAN_WEEK_WALKS", "8"); vi.stubEnv("PLAN_MONTH_WALKS", "25"); });
 const now = new Date("2026-03-14T12:00:00Z");
 const user = (over: Partial<User> = {}): User => ({ id: "u1", email: "someone@example.com", emailKey: "someone@example.com", createdAt: now, lastSeenAt: now, language: "en", stripeCustomerId: null, plan: "none", planStatus: "none", planStartsAt: null, planEndsAt: null, subscriptionId: null, ...over });
 const week = user({ plan: "week", planStatus: "active", planStartsAt: new Date("2026-03-12T00:00:00Z"), planEndsAt: new Date("2026-03-19T00:00:00Z") });
