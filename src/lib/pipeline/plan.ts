@@ -13,6 +13,13 @@ import { loadSpotsInBbox, mergeScouted } from "../scout/spots";
 import { cachedPlacesFor, registerCity } from "../scout/places";
 import type { Providers, Walk } from "./walk";
 
+/** A fact worth reading aloud while waiting: a real sentence, not a tag value. */
+export function readsAsSentence(f: string): boolean {
+  if (!/^(Recommended on|Description|Inscription)/.test(f)) return false;
+  const body = f.replace(/^[^:]+: /, "");
+  return body.split(/\s+/).length >= 6 && /[a-z]{3,}/i.test(body) && !/\d{1,2}:\d{2}/.test(body);
+}
+
 export type Stage = "understood" | "searching" | "probing" | "choosing" | "routing";
 export type StageEvent = { stage: Stage; ms: number; detail: Record<string, unknown> };
 export type Llm = { transport: Transport; models: { interpret: string; curate: string } };
@@ -46,16 +53,19 @@ export async function planWalk(raw: unknown, p: Providers, llm: Llm, emit: (e: S
   if (!cachedPlaces && start.city) void registerCity(start.city, p.geocoder).catch(() => null);
   const found = mergeScouted(mapped, scouted);
   // Hours: a timed place closed for the whole window is out; what stays carries its hours as a fact the model can cite.
+  const startHour = startAt.getUTCHours();
+  const lateStart = startHour >= 18 || startHour < 8;
   const withHours = found.flatMap((c) => {
     const h = openState(c.tags.opening_hours, startAt, endAt);
     if (h.state === "closed" && TIMED_CATEGORIES.has(c.category)) return [];
-    const fact = h.state === "open" ? `Hours during the walk: ${h.note}` : h.state === "closed" ? `Hours: ${h.note}` : null;
+    const fact = h.state === "open" ? `Hours during the walk: ${h.note}` : h.state === "closed" ? `Hours: ${h.note}`
+      : lateStart && TIMED_CATEGORIES.has(c.category) ? `Hours unknown; the walk is at ${startAt.toISOString().slice(11, 16)}, so this is likely closed and only worth it from outside` : null;
     return [fact ? { ...c, facts: [...c.facts, fact] } : c];
   });
   // Longer walks deserve more stops and a wider pool to choose from.
   const targetStops = Math.min(12, Math.max(4, Math.round(intent.minutes / 20)));
   const ranked = rank(withHours, start, end, corridorM, Math.min(70, 30 + targetStops * 4));
-  emit({ stage: "searching", ms: Math.round(t() - t0), detail: { found: found.length, cached: !!cachedPlaces, scouted: scouted.length, start: { lat: start.lat, lon: start.lon }, end: end ? { lat: end.lat, lon: end.lon } : null, bbox, sample: ranked.flatMap((c) => c.facts.filter((f) => !f.startsWith("Hours") && !f.startsWith("Wikipedia") && !f.startsWith("Wikidata")).slice(0, 1).map((f) => `${c.name}: ${f.replace(/^[A-Za-z ]+: /, "")}`)).slice(0, 6), closed: found.length - withHours.length, kept: ranked.length, weather: weather?.summary ?? null, candidates: ranked.map((c) => ({ id: c.id, lat: c.lat, lon: c.lon })) } });
+  emit({ stage: "searching", ms: Math.round(t() - t0), detail: { found: found.length, cached: !!cachedPlaces, scouted: scouted.length, start: { lat: start.lat, lon: start.lon }, end: end ? { lat: end.lat, lon: end.lon } : null, bbox, sample: ranked.flatMap((c) => c.facts.filter(readsAsSentence).slice(0, 1).map((f) => `${c.name}: ${f.replace(/^(Recommended on "[^"]*"|Description|Inscription): /, "")}`)).slice(0, 6), closed: found.length - withHours.length, kept: ranked.length, weather: weather?.summary ?? null, candidates: ranked.map((c) => ({ id: c.id, lat: c.lat, lon: c.lon })) } });
 
   t0 = t();
   // While the model chooses, route from the start to the best candidates: the browser animates these along the streets.
@@ -63,7 +73,7 @@ export async function planWalk(raw: unknown, p: Providers, llm: Llm, emit: (e: S
     const targets = ranked.slice(0, 12);
     const routes = await Promise.all(targets.map((c) => p.router.walk([start, c]).then((rt) => rt.geometry).catch(() => null)));
     const paths = routes.filter((g): g is NonNullable<typeof g> => !!g && g.length > 1);
-    emit({ stage: "probing", ms: Math.round(t() - t0), detail: { paths } });
+    emit({ stage: "probing", ms: Math.round(t() - t0), detail: { paths, targets: targets.filter((_, i) => routes[i]).map((c) => c.id) } });
   })().catch(() => undefined);
   const { curated, usage } = await curate({ ...intent, targetStops, vibe: [intent.vibe, weather?.nudge ? `Weather: ${weather.summary}. ${weather.nudge}` : weather ? `Weather: ${weather.summary}.` : ""].filter(Boolean).join(" ") }, ranked, llm.transport, llm.models.curate);
   const byId = new Map(ranked.map((c) => [c.id, c]));
@@ -76,7 +86,11 @@ export async function planWalk(raw: unknown, p: Providers, llm: Llm, emit: (e: S
   const arrivals = arrivalTimes(startAt, fitted.route, fitted.stops.length, intent.pace);
   const stops = fitted.stops.map((s, i) => {
     const h = openAt(s.tags.opening_hours, arrivals[i]);
-    return { id: s.id, name: s.name, category: s.category, lat: s.lat, lon: s.lon, facts: s.facts, hook: s.hook, story: s.story, why: s.why, arrival: arrivals[i].toISOString().slice(11, 16), open: h.state, hoursNote: h.note, sources: s.sources ?? [] };
+    const hour = arrivals[i].getUTCHours();
+    const late = hour >= 18 || hour < 8;
+    const note = h.state === "unknown" ? (TIMED_CATEGORIES.has(s.category) && late ? "hours unknown, may be closed at this time" : TIMED_CATEGORIES.has(s.category) ? "hours unknown" : "") : h.note;
+    const legMinutes = Math.max(1, Math.round(((fitted.route.legs[i]?.durationS ?? 0) * (PACE_MPS.normal / PACE_MPS[intent.pace])) / 60));
+    return { id: s.id, name: s.name, category: s.category, lat: s.lat, lon: s.lon, facts: s.facts, hook: s.hook, story: s.story, why: s.why, arrival: arrivals[i].toISOString().slice(11, 16), open: h.state, hoursNote: note, legMinutes, sources: s.sources ?? [] };
   });
   emit({ stage: "routing", ms: Math.round(t() - t0), detail: { totalMinutes: fitted.totalMinutes, dropped: chosen.length - stops.length } });
   logEvent("walk.built", { minutes: intent.minutes, interests: intent.interests, companions: intent.companions, language: intent.language, candidates: ranked.length, stops: stops.length, totalMinutes: fitted.totalMinutes, usage });

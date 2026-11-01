@@ -26,14 +26,15 @@ export default function AroundView() {
     track("around.view", { options: data.options.length });
   }, []);
 
-  useEffect(() => {
-    // Geolocation only exists on secure origins; say so instead of waiting forever. Set on the next tick to keep hydration clean.
-    if (!navigator.geolocation) { const t = setTimeout(() => setError("Location needs a secure (https) connection or localhost."), 0); return () => clearTimeout(t); }
+  const locate = useCallback(() => {
+    if (!navigator.geolocation) { setError("Location needs a secure (https) connection or localhost."); return; }
+    setError(null);
     navigator.geolocation.getCurrentPosition(
       (g) => { const p = { lat: g.coords.latitude, lon: g.coords.longitude }; setPos(p); void load(p); },
       () => setError("Allow location access to see what is around you."), { timeout: 10_000 },
     );
   }, [load]);
+  useEffect(() => { const t = setTimeout(locate, 0); return () => clearTimeout(t); }, [locate]);
 
   const stops = (options ?? []).map((o) => ({ id: o.id, name: o.name, category: o.category, lat: o.lat, lon: o.lon, closed: o.open === "closed" }));
   const spokes = pos ? (options ?? []).map((o) => [pos, { lat: o.lat, lon: o.lon }] as [typeof pos, { lat: number; lon: number }]) : [];
@@ -48,7 +49,16 @@ export default function AroundView() {
         </div>
       </aside>
       <main className="flex flex-col gap-4 px-6 py-6 md:w-[520px] md:flex-none md:px-10 md:py-10">
-        <h1 className="font-serif text-[26px] tracking-tight">{options ? `${options.length} within ten minutes` : error ?? "Finding what is around you…"}</h1>
+        <h1 className="font-serif text-[26px] tracking-tight">{options ? `${options.length} within ten minutes` : error ? "Where are you?" : "Finding what is around you…"}</h1>
+        {error ? (
+          <div className="flex flex-col gap-3 rounded-2xl bg-soft p-5">
+            <p className="text-[15px] text-muted">Around me needs your location to find what is near you.</p>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={locate} className="flex min-h-12 items-center gap-2 rounded-xl bg-text px-4 font-semibold text-paper"><Icon.locate width={18} height={18} />Use my location</button>
+              <Link href="/" className="flex min-h-12 items-center rounded-xl border-2 border-line px-4 font-semibold">Or plan a walk from a place</Link>
+            </div>
+          </div>
+        ) : null}
         {options?.length === 0 ? <p className="text-muted">Nothing worth a story within ten minutes here. Try a walk instead.</p> : null}
         <ol className="flex flex-col gap-3">
           {(options ?? []).map((o, i) => (

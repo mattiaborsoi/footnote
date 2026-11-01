@@ -27,11 +27,13 @@ export default function Planner({ initial, tailorOf }: { initial?: Partial<FormS
   const [box, setBox] = useState<Box | null>(null);
   const [start, setStart] = useState<{ lat: number; lon: number } | null>(null);
   const [snakes, setSnakes] = useState<{ lat: number; lon: number }[][]>([]);
+  const [considered, setConsidered] = useState<string[]>([]);
+  const [revealed, setRevealed] = useState(0);
   const [end, setEnd] = useState<{ lat: number; lon: number } | null>(null);
   const [startedAt, setStartedAt] = useState(0);
 
   const submit = useCallback(async (req: Req) => {
-    setBusy(true); setError(null); setStages([]); setFacts([]); setCands([]); setChosen([]); setBox(null); setStart(null); setEnd(null); setSnakes([]);
+    setBusy(true); setError(null); setStages([]); setFacts([]); setCands([]); setChosen([]); setBox(null); setStart(null); setEnd(null); setSnakes([]); setConsidered([]); setRevealed(0);
     const t0 = Date.now();
     setStartedAt(t0);
     try {
@@ -50,8 +52,14 @@ export default function Planner({ initial, tailorOf }: { initial?: Partial<FormS
             setCands((d.candidates as Cand[]) ?? []); setBox((d.bbox as Box) ?? null); setStart((d.start as { lat: number; lon: number }) ?? null); setEnd((d.end as { lat: number; lon: number } | null) ?? null);
             setFacts((d.sample as string[]) ?? []);
           }
-          if (s.stage === "probing") setSnakes((s.detail.paths as { lat: number; lon: number }[][]) ?? []);
-          if (s.stage === "choosing") { setChosen((s.detail.stops as string[]) ?? []); setSnakes([]); }
+          if (s.stage === "probing") { setSnakes((s.detail.paths as { lat: number; lon: number }[][]) ?? []); setConsidered((s.detail.targets as string[]) ?? []); }
+          if (s.stage === "choosing") {
+            const ids = (s.detail.stops as string[]) ?? [];
+            setSnakes([]); setChosen(ids);
+            // pins land one by one, in walk order
+            const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+            ids.forEach((_, i) => setTimeout(() => setRevealed(i + 1), reduced ? 0 : 350 * (i + 1)));
+          }
         } else if (event === "walk") {
           const w = data as { id?: string | null; totalMinutes: number };
           track("walk.received", { ms: Date.now() - t0, totalMinutes: w.totalMinutes }, w.id ?? undefined);
@@ -69,23 +77,23 @@ export default function Planner({ initial, tailorOf }: { initial?: Partial<FormS
     }
   }, [router, tailorOf]);
 
-  const chosenStops = useMemo(() => chosen.map((id, i) => { const c = cands.find((x) => x.id === id); return c ? { id, name: `Stop ${i + 1}`, category: "place", lat: c.lat, lon: c.lon } : null; }).filter((x): x is NonNullable<typeof x> => !!x), [chosen, cands]);
+  const chosenStops = useMemo(() => chosen.slice(0, revealed).map((id, i) => { const c = cands.find((x) => x.id === id); return c ? { id, name: `Stop ${i + 1}`, category: "place", lat: c.lat, lon: c.lon } : null; }).filter((x): x is NonNullable<typeof x> => !!x), [chosen, cands, revealed]);
 
   return (
-    <div className="flex min-h-dvh flex-col md:flex-row">
+    <div className="flex min-h-dvh flex-col-reverse justify-end md:flex-row md:justify-start">
       <section className="flex flex-col gap-6 px-6 py-8 md:w-[520px] md:flex-none md:overflow-y-auto md:px-10 md:py-10 lg:w-[600px]">
         <header className="flex items-center justify-between">
           <Logo />
           {tailorOf ? <span className="text-[13px] text-muted">Tailoring a ready-made walk</span> : <Link href="/around" className="flex min-h-10 items-center gap-2 rounded-full border-2 border-line px-3 text-[14px] font-semibold text-ink"><Icon.locate width={16} height={16} />Around me</Link>}
         </header>
-        {busy || error ? <WaitPanel stages={stages} facts={facts} startedAt={startedAt} error={error} /> : null}
+        {busy || error ? <WaitPanel stages={stages} facts={facts} startedAt={startedAt} error={error} revealed={revealed} total={chosen.length} /> : null}
         <div className={busy ? "hidden md:block md:opacity-50" : ""}>
           <RequestForm onSubmit={submit} busy={busy} initial={initial} />
         </div>
         {error ? <button type="button" className="min-h-12 rounded-2xl border-2 border-line font-semibold" onClick={() => setError(null)}>Try again</button> : null}
       </section>
-      <aside className="relative min-h-[320px] flex-1 bg-map md:sticky md:top-0 md:h-dvh md:self-start" aria-label="Map">
-        <WalkMap start={start} end={end} candidates={cands} stops={chosenStops} searchBox={box} snakes={busy ? snakes : []} className="absolute inset-0" />
+      <aside className={`relative flex-1 bg-map md:sticky md:top-0 md:block md:h-dvh md:self-start ${busy || error ? "min-h-[320px]" : "hidden"}`} aria-label="Map">
+        {start ? <WalkMap start={start} end={end} candidates={cands} stops={chosenStops} searchBox={box} snakes={busy ? snakes : []} considered={considered} dim={busy && !chosen.length} className="absolute inset-0" /> : null}
       </aside>
     </div>
   );

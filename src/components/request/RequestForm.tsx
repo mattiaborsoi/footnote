@@ -74,6 +74,7 @@ export default function RequestForm({ onSubmit, busy, initial }: { onSubmit: (re
   const [step, setStep] = useState(0);
   const [phone, setPhone] = useState(false);
   const [locating, setLocating] = useState(false);
+  const [nudge, setNudge] = useState<string | null>(null);
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 767px)");
     const on = () => setPhone(mq.matches);
@@ -81,8 +82,8 @@ export default function RequestForm({ onSubmit, busy, initial }: { onSubmit: (re
     mq.addEventListener("change", on);
     return () => mq.removeEventListener("change", on);
   }, []);
-  const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setF((s) => ({ ...s, [k]: v }));
-  const toggle = (k: "companions" | "interests", v: string) => setF((s) => ({ ...s, [k]: s[k].includes(v) ? s[k].filter((x) => x !== v) : [...s[k], v] }));
+  const set = <K extends keyof FormState>(k: K, v: FormState[K]) => { setNudge(null); setF((s) => ({ ...s, [k]: v })); };
+  const toggle = (k: "companions" | "interests", v: string) => { setNudge(null); setF((s) => ({ ...s, [k]: s[k].includes(v) ? s[k].filter((x) => x !== v) : [...s[k], v] })); };
   const summary = useMemo(() => summarySentence(f), [f]);
   const canSubmit = f.start.trim().length > 1 && f.interests.length > 0 && !busy;
   const show = (i: number) => !phone || step === i;
@@ -98,9 +99,16 @@ export default function RequestForm({ onSubmit, busy, initial }: { onSubmit: (re
   const submit = () => { if (!canSubmit) return; track("request.submit", { minutes: f.minutes, interests: f.interests.length, companions: f.companions.join(","), notes: f.notes.trim().length > 0 }); onSubmit(toRequest(f)); };
 
   return (
-    <form className="flex flex-col gap-7" onSubmit={(e) => { e.preventDefault(); if (phone && step < STEPS.length - 1) setStep(step + 1); else submit(); }} aria-busy={busy}>
+    <form className="flex flex-col gap-7" onSubmit={(e) => {
+      e.preventDefault();
+      if (phone && step === 0 && f.start.trim().length < 2) { setNudge("Add a start to continue."); return; }
+      if (phone && step === 3 && !f.interests.length) { setNudge("Pick at least one thing you love."); return; }
+      if (!phone && !canSubmit) { setNudge(f.start.trim().length < 2 ? "Add a start to continue." : "Pick at least one thing you love."); return; }
+      setNudge(null);
+      if (phone && step < STEPS.length - 1) setStep(step + 1); else submit();
+    }} aria-busy={busy}>
       {phone ? (
-        <div className="flex items-center justify-between text-[13px] text-muted">
+        <div className="sticky top-0 z-10 -mx-6 flex items-center justify-between bg-paper px-6 py-2 text-[13px] text-muted">
           <span>{step + 1} of {STEPS.length}</span>
           <div className="flex gap-1.5" aria-hidden="true">{STEPS.map((_, i) => <span key={i} className={`h-1 w-8 rounded-full ${i <= step ? "bg-ink" : "bg-line"}`} />)}</div>
         </div>
@@ -151,6 +159,7 @@ export default function RequestForm({ onSubmit, busy, initial }: { onSubmit: (re
       {show(3) ? (
         <section className="flex flex-col gap-4" aria-labelledby="q-love">
           <h2 id="q-love" className={h2}>What you love</h2>
+          <p className="text-[14px] text-muted">Tap everything that applies; the first you tap counts most.</p>
           <div className="grid grid-cols-3 gap-2.5 md:grid-cols-6" role="group" aria-label="Interests">
             {INTEREST_TILES.map((t) => { const I = Icon[t.icon]; const on = f.interests.includes(t.key); return <button type="button" key={t.key} className={tile(on)} aria-pressed={on} onClick={() => toggle("interests", t.key)}><I style={{ color: on ? "var(--ink)" : "var(--muted)" }} />{t.label}</button>; })}
           </div>
@@ -162,8 +171,8 @@ export default function RequestForm({ onSubmit, busy, initial }: { onSubmit: (re
           <h2 id="q-when" className={h2}>When?</h2>
           <div className="flex flex-wrap gap-2">
             <button type="button" className={chip(!f.date)} aria-pressed={!f.date} onClick={() => { set("date", ""); set("time", ""); }}>Now</button>
-            <input type="date" className={`${input} w-auto`} value={f.date} onChange={(e) => set("date", e.target.value)} aria-label="Date" />
-            <input type="time" className={`${input} w-auto`} value={f.time} onChange={(e) => set("time", e.target.value)} aria-label="Time" disabled={!f.date} />
+            <label className="flex flex-col gap-1 text-[12px] font-semibold uppercase tracking-wider text-muted">Day<input type="date" className={`${input} w-auto normal-case tracking-normal`} value={f.date} onChange={(e) => set("date", e.target.value)} /></label>
+            <label className="flex flex-col gap-1 text-[12px] font-semibold uppercase tracking-wider text-muted">Time<input type="time" className={`${input} w-auto normal-case tracking-normal`} value={f.time} onChange={(e) => set("time", e.target.value)} disabled={!f.date} /></label>
           </div>
           <p className="text-[14px] text-muted">So opening hours and the weather match the day.</p>
         </section>
@@ -176,9 +185,10 @@ export default function RequestForm({ onSubmit, busy, initial }: { onSubmit: (re
         </section>
       ) : null}
 
+      {nudge ? <p role="alert" className="rounded-xl bg-soft px-4 py-3 text-[14px] font-medium text-amber">{nudge}</p> : null}
       <div className="mt-auto flex gap-3">
-        {phone && step > 0 ? <button type="button" className="min-h-[52px] flex-1 rounded-2xl border-2 border-line font-semibold" onClick={() => setStep(step - 1)}>Back</button> : null}
-        <button type="submit" className="min-h-[52px] flex-[2] rounded-2xl bg-text font-semibold text-paper disabled:opacity-40" disabled={phone ? (step === 0 && f.start.trim().length < 2) || (step === 3 && !f.interests.length) || busy : !canSubmit}>
+        {phone && step > 0 ? <button type="button" className="min-h-[52px] flex-1 rounded-2xl border-2 border-line font-semibold" onClick={() => { setNudge(null); setStep(step - 1); }}>Back</button> : null}
+        <button type="submit" className="min-h-[52px] flex-[2] rounded-2xl bg-text font-semibold text-paper disabled:opacity-40" disabled={busy}>
           {phone && step < STEPS.length - 1 ? `Next: ${STEPS[step + 1].toLowerCase()}` : busy ? "Building…" : "Build my walk"}
         </button>
       </div>

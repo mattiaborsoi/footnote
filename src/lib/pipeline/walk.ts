@@ -11,7 +11,7 @@ export type Walk = {
   summary: string;
   start: LatLng & { label: string };
   end: (LatLng & { label: string }) | null;
-  stops: { id: string; name: string; category: string; lat: number; lon: number; facts: string[]; hook: string; story: string; why: string; arrival?: string; open?: "open" | "closed" | "unknown"; hoursNote?: string; sources?: { title: string; url: string }[] }[];
+  stops: { id: string; name: string; category: string; lat: number; lon: number; facts: string[]; hook: string; story: string; why: string; arrival?: string; open?: "open" | "closed" | "unknown"; hoursNote?: string; legMinutes?: number; sources?: { title: string; url: string }[] }[];
   totalMinutes: number;
   walkingMinutes: number;
   distanceM: number;
