@@ -1,0 +1,12 @@
+# One site, automatic certificates, the app behind it. SITE_HOST comes from .env.
+{$SITE_HOST} {
+	encode zstd gzip
+	reverse_proxy app:3000
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		Permissions-Policy "geolocation=(self), camera=(), microphone=(), payment=()"
+		-Server
+	}
+}

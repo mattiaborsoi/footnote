@@ -1,8 +1,11 @@
-.git
-.githooks
 node_modules
 .next
-.env
-.env.*
+.git
 .local
 data
+.env
+.env.*
+!.env.example
+playwright-report
+test-results
+public/maplibre-gl-*.mjs

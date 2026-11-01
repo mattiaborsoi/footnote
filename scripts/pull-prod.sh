@@ -9,7 +9,7 @@ PROD_DIR="${PROD_DIR:-/opt/footnote}"
 cd "$(dirname "$0")/.."
 mkdir -p data
 echo "dumping production over ssh…"
-ssh "$PROD_SSH" "cd '$PROD_DIR' && docker compose exec -T db pg_dump -U footnote -Fc footnote" > data/prod.dump
+ssh "$PROD_SSH" "cd '$PROD_DIR' && docker compose -f compose.prod.yml exec -T db pg_dump -U footnote -Fc footnote" > data/prod.dump
 echo "restoring into footnote_mirror…"
 docker compose exec -T db sh -c 'dropdb -U footnote --if-exists footnote_mirror && createdb -U footnote footnote_mirror'
 docker compose exec -T db pg_restore -U footnote -d footnote_mirror --no-owner --no-privileges < data/prod.dump

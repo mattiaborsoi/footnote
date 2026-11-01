@@ -1,0 +1,8 @@
+[Unit]
+Description=Footnote: pull the image CI built and restart the app when it changed
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/footnote/deploy/update.sh
