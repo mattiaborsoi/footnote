@@ -13,7 +13,7 @@ export default function PrivacyPage() {
       <p className="text-muted">Draft for the test period; it will be reviewed before launch.</p>
       <h2 className="font-serif text-[22px]">What we keep</h2>
       <ul className="list-disc space-y-2 pl-5">
-        <li><strong>Your requests and walks.</strong> The place, time, company and interests you give us, and the walk we build, stored under the walk&apos;s link. The optional free-text line is deleted after 90 days.</li>
+        <li><strong>Your requests and walks.</strong> The place, time, company and interests you give us, and the walk we build, stored under the walk&apos;s link. A walk you do not keep is deleted after 30 days; the optional free-text line after 90. Walk links are not listed anywhere and carry a no-index mark.</li>
         <li><strong>Product events.</strong> What was asked, how long each step took, what was tapped and any error, with an id your browser made up, for 90 days. No advertising, no trackers, no analytics cookie.</li>
         <li><strong>Your email</strong>, when you sign in, with the walks you keep and your pass. Sign-in codes expire after 15 minutes.</li>
         <li><strong>Feedback</strong> you send through the bug button, with the screen and walk it was about, for a year.</li>

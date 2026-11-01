@@ -64,7 +64,8 @@ export async function planWalk(raw: unknown, p: Providers, llm: Llm, emit: (e: S
   });
   // Longer walks deserve more stops and a wider pool to choose from.
   const targetStops = Math.min(12, Math.max(4, Math.round(intent.minutes / 20)));
-  const ranked = rank(withHours, start, end, corridorM, Math.min(70, 30 + targetStops * 4));
+  // A pool of about seven places per stop wanted: enough choice, not a long read for the model.
+  const ranked = rank(withHours, start, end, corridorM, Math.min(60, 18 + targetStops * 3));
   emit({ stage: "searching", ms: Math.round(t() - t0), detail: { found: found.length, cached: !!cachedPlaces, scouted: scouted.length, start: { lat: start.lat, lon: start.lon }, end: end ? { lat: end.lat, lon: end.lon } : null, bbox, sample: ranked.flatMap((c) => c.facts.filter(readsAsSentence).slice(0, 1).map((f) => `${c.name}: ${f.replace(/^(Recommended on "[^"]*"|Description|Inscription): /, "")}`)).slice(0, 6), closed: found.length - withHours.length, kept: ranked.length, weather: weather?.summary ?? null, candidates: ranked.map((c) => ({ id: c.id, lat: c.lat, lon: c.lon })) } });
 
   t0 = t();

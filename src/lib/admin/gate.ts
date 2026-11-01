@@ -1,4 +1,4 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
 import { connection } from "next/server";
 import { hashSecret, sameHash } from "../auth/codes";
@@ -18,10 +18,9 @@ export async function isAdmin(): Promise<boolean> {
   return !!v && sameHash(v, hashSecret(token));
 }
 
-/** Pages: 404 where the dashboard does not exist, the login where it does. */
+/** Pages: the proxy already sent strangers to the login; this is the second lock, and it never redirects (a redirect thrown while streaming makes the dev server loop). */
 export async function requireAdmin(): Promise<void> {
-  if (!adminEnabled()) notFound();
-  if (!(await isAdmin())) redirect("/admin/login");
+  if (!adminEnabled() || !(await isAdmin())) notFound();
 }
 
 export async function setAdminCookie(on: boolean): Promise<void> {
