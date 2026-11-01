@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import Feedback from "@/components/Feedback";
 import KeepWalk from "@/components/account/KeepWalk";
+import Rating from "@/components/walk/Rating";
 import { Icon } from "@/components/icons";
 import { track, whenString } from "@/lib/client/events";
 import { colorFor } from "@/lib/client/colors";
@@ -101,6 +102,7 @@ export default function WalkView({ initial, owned = false }: { initial: StoredWa
             );
           })}
         </ol>
+        <Rating walkId={walk.id} />
         <footer className="text-[12px] text-muted">Map data © OpenStreetMap contributors. Stories from Wikipedia and the linked sources. Built with Claude.</footer>
       </main>
       <div className="print:hidden"><Feedback screen="walk" walkId={walk.id} /></div>

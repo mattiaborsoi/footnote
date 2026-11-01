@@ -12,11 +12,12 @@ async function WalksPageContent() {
   const rows = await recentWalks();
   return (
     <Card title={`Walks · last ${rows.length}`}>
-      <Table head={["When", "Walk", "From", "Interests", "Min", "Stops", "City", "Owner", "Lang"]}>
+      <Table head={["When", "Walk", "Rated", "From", "Interests", "Min", "Stops", "City", "Owner", "Lang"]}>
         {rows.map((r) => (
           <tr key={r.id}>
             <td className={td}>{when(r.createdAt)}</td>
             <td className={td}><Link className="underline" href={`/w/${r.id}`} target="_blank">{r.title}</Link>{r.preset ? <span className="ml-2 rounded-full bg-soft px-2 text-[11px] uppercase">preset</span> : null}</td>
+            <td className={td}>{r.rating === "up" ? "up" : r.rating === "down" ? <span className="text-amber">down</span> : ""}</td>
             <td className={td}>{r.start}</td>
             <td className={td}>{r.interests}</td>
             <td className={td}>{r.minutes}</td>
@@ -26,7 +27,7 @@ async function WalksPageContent() {
             <td className={td}>{r.language}</td>
           </tr>
         ))}
-        {!rows.length ? <tr><td className={td} colSpan={9}>No walks yet.</td></tr> : null}
+        {!rows.length ? <tr><td className={td} colSpan={10}>No walks yet.</td></tr> : null}
       </Table>
     </Card>
   );

@@ -25,6 +25,18 @@ export async function tokenTotals(days: number): Promise<{ walks: number; prompt
   return { walks: r?.walks ?? 0, prompt: Number(r?.prompt ?? 0), completion: Number(r?.completion ?? 0) };
 }
 
+/** Thumbs up and down on walks, with the reasons given. */
+export async function ratings(days: number): Promise<{ up: number; down: number; reasons: Record<string, number> }> {
+  const db = adminDb();
+  if (!db) return { up: 0, down: 0, reasons: {} };
+  const [vals, whys] = await Promise.all([
+    db.select({ v: sql<string>`${events.fields}->>'value'`, n: count() }).from(events).where(and(eq(events.type, "walk.rating"), gt(events.ts, since(days)))).groupBy(sql`1`),
+    db.select({ r: sql<string>`${events.fields}->>'reason'`, n: count() }).from(events).where(and(eq(events.type, "walk.rating_reason"), gt(events.ts, since(days)))).groupBy(sql`1`),
+  ]);
+  const by = Object.fromEntries(vals.map((x) => [x.v, Number(x.n)]));
+  return { up: by.up ?? 0, down: by.down ?? 0, reasons: Object.fromEntries(whys.map((x) => [x.r, Number(x.n)])) };
+}
+
 /** How long people waited: the served walk's total time, median and slow tail. */
 export async function waitTimes(days: number): Promise<{ n: number; p50: number; p95: number }> {
   const db = adminDb();
@@ -88,7 +100,7 @@ export async function people(limit = 200): Promise<PersonRow[]> {
   return rows.map((r) => ({ ...r.user, walks: Number(r.walks) }));
 }
 
-export type WalkRow = { id: string; createdAt: Date; title: string; language: string; cityId: string | null; preset: string | null; owner: string | null; minutes: number; stops: number; start: string; interests: string };
+export type WalkRow = { id: string; createdAt: Date; title: string; language: string; cityId: string | null; preset: string | null; owner: string | null; minutes: number; stops: number; start: string; interests: string; rating: string | null };
 
 export async function recentWalks(limit = 100): Promise<WalkRow[]> {
   const db = adminDb();
@@ -99,6 +111,7 @@ export async function recentWalks(limit = 100): Promise<WalkRow[]> {
     stops: sql<number>`coalesce(jsonb_array_length(${walks.walk}->'stops'), 0)`,
     start: sql<string>`split_part(coalesce(${walks.walk}->'start'->>'label', ${walks.request}->>'start', ''), ',', 1) || case when position(',' in coalesce(${walks.walk}->'start'->>'label', '')) > 0 then ',' || split_part(${walks.walk}->'start'->>'label', ',', 2) else '' end`,
     interests: sql<string>`coalesce((select string_agg(x, ', ') from jsonb_array_elements_text(${walks.request}->'interests') x), '')`,
+    rating: sql<string | null>`(select e.fields->>'value' from events e where e.walk_id = walks.id and e.type = 'walk.rating' order by e.ts desc limit 1)`,
   }).from(walks).leftJoin(users, eq(users.id, walks.userId)).orderBy(desc(walks.createdAt)).limit(limit);
   return rows.map((r) => ({ ...r, minutes: Number(r.minutes), stops: Number(r.stops) }));
 }
