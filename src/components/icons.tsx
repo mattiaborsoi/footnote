@@ -25,6 +25,8 @@ export const Icon = {
   back: (p: SVGProps<SVGSVGElement>) => <svg {...base(p)}><path d="M15 5l-7 7 7 7" /></svg>,
   check: (p: SVGProps<SVGSVGElement>) => <svg {...base(p)}><path d="M5 12.5l4 4 10-10" /></svg>,
   rain: (p: SVGProps<SVGSVGElement>) => <svg {...base(p)}><path d="M7 17a4 4 0 0 1-1-7.9A6 6 0 0 1 17.5 8a4.5 4.5 0 0 1-.5 9H7z" /><path d="M9 20l1 2M13 20l1 2" /></svg>,
+  up: (p: SVGProps<SVGSVGElement>) => <svg {...base(p)}><path d="M7 11v10H3V11z" /><path d="M7 11l4-8a2.5 2.5 0 0 1 2.5 2.5V9h5a2 2 0 0 1 2 2.3l-1.2 7A2 2 0 0 1 17.3 20H7" /></svg>,
+  down: (p: SVGProps<SVGSVGElement>) => <svg {...base(p)}><path d="M17 13V3h4v10z" /><path d="M17 13l-4 8a2.5 2.5 0 0 1-2.5-2.5V15h-5a2 2 0 0 1-2-2.3l1.2-7A2 2 0 0 1 6.7 4H17" /></svg>,
   clock: (p: SVGProps<SVGSVGElement>) => <svg {...base(p)}><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>,
 };
 export type IconName = keyof typeof Icon;
