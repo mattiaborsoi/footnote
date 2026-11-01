@@ -11,7 +11,8 @@ export const walks = pgTable("walks", {
   walk: jsonb("walk").notNull(),
   cityId: text("city_id"),
   preset: text("preset"),
-});
+  fingerprint: text("fingerprint"),
+}, (t) => [index("walks_fingerprint_idx").on(t.fingerprint, t.createdAt)]);
 
 /** Product events: what people asked, how long each stage took, what they tapped, what failed. No cookies; ids come from the client. */
 export const events = pgTable(

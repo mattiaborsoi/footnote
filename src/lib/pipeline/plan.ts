@@ -60,7 +60,7 @@ export async function planWalk(raw: unknown, p: Providers, llm: Llm, emit: (e: S
   t0 = t();
   // While the model chooses, route from the start to the best candidates: the browser animates these along the streets.
   const probing = (async () => {
-    const targets = ranked.slice(0, 6);
+    const targets = ranked.slice(0, 12);
     const routes = await Promise.all(targets.map((c) => p.router.walk([start, c]).then((rt) => rt.geometry).catch(() => null)));
     const paths = routes.filter((g): g is NonNullable<typeof g> => !!g && g.length > 1);
     emit({ stage: "probing", ms: Math.round(t() - t0), detail: { paths } });
