@@ -62,7 +62,8 @@ Everything runs in containers. Nothing is installed on any host machine.
 2. **Every change is a pull request**, squash-merged by the owner, titled like a conventional commit (`feat:`, `fix:`, `chore:`, `docs:`, `test:`, `refactor:`, `ci:`, `perf:`). Direct pushes to main are blocked by `.githooks/pre-push`. Enable hooks once per checkout: `git config core.hooksPath .githooks`.
 3. **Small, clear changes.** PR body: what, why, how tested. No long explanations.
 4. **Update this file in the same PR** as any change of plan, structure or decision. The reviewer agent checks that.
-5. **Claude curates, never invents.** Stops come from candidate IDs, stories only from supplied facts, output is schema-validated, unknown IDs are rejected, routing is deterministic.
+5. **Every UI change is checked against the design skills.** Before reshaping a screen, read the `frontend-design` skill (aesthetic direction, the list of AI tells) and the `apple-design` skill (motion); after the change, run the `web-design-guidelines` skill over the changed files (Vercel's checklist: interaction, animation, forms, accessibility, performance) and fix what it finds before opening the PR. The rules distilled so far are in the design brief under Product.
+6. **Claude curates, never invents.** Stops come from candidate IDs, stories only from supplied facts, output is schema-validated, unknown IDs are rejected, routing is deterministic.
 
 ## Architecture (current)
 
