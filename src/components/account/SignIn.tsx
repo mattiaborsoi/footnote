@@ -45,8 +45,8 @@ export default function SignIn({ next }: { next: string | null }) {
         <form className="flex flex-col gap-4" onSubmit={verify}>
           <h1 className="font-serif text-[30px] leading-tight tracking-tight">Check your email</h1>
           <p className="text-[16px] text-muted">We sent a six-digit code to {masked}. Type it here, or open the link in the email on this device.</p>
-          <label className="flex flex-col gap-1 text-[12px] font-semibold uppercase tracking-wider text-muted">Code
-            <input className={`${input} tracking-[0.3em]`} inputMode="numeric" autoComplete="one-time-code" pattern="[0-9 ]*" maxLength={7} value={code} onChange={(e) => setCode(e.target.value)} autoFocus required />
+          <label className="flex flex-col gap-1 text-[13px] font-medium text-muted">Code
+            <input className={`${input} tracking-[0.3em]`} inputMode="numeric" spellCheck={false} autoComplete="one-time-code" pattern="[0-9 ]*" maxLength={7} value={code} onChange={(e) => setCode(e.target.value)} autoFocus required />
           </label>
           {error ? <p role="alert" className="rounded-xl bg-soft px-4 py-3 text-[14px] font-medium text-amber">{error}</p> : null}
           <button type="submit" className="min-h-[52px] rounded-2xl bg-text font-semibold text-paper disabled:opacity-40" disabled={busy || code.replace(/\D/g, "").length < 6}>{busy ? "Checking…" : "Sign in"}</button>
@@ -56,8 +56,8 @@ export default function SignIn({ next }: { next: string | null }) {
         <form className="flex flex-col gap-4" onSubmit={start}>
           <h1 className="font-serif text-[30px] leading-tight tracking-tight">Sign in</h1>
           <p className="text-[16px] text-muted">Your email, a code, no password. Signing in keeps your walks and unlocks a pass.</p>
-          <label className="flex flex-col gap-1 text-[12px] font-semibold uppercase tracking-wider text-muted">Email
-            <input className={`${input} normal-case tracking-normal`} type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} autoFocus required />
+          <label className="flex flex-col gap-1 text-[13px] font-medium text-muted">Email
+            <input className={input} type="email" spellCheck={false} autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} autoFocus required />
           </label>
           {error ? <p role="alert" className="rounded-xl bg-soft px-4 py-3 text-[14px] font-medium text-amber">{error}</p> : null}
           <button type="submit" className="min-h-[52px] rounded-2xl bg-text font-semibold text-paper disabled:opacity-40" disabled={busy}>{busy ? "Sending…" : "Email me a code"}</button>

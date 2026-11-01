@@ -26,6 +26,9 @@ export type MapProps = {
   drawRoute?: boolean;
   /** Dim the base map (the wait). */
   dim?: boolean;
+  /** Cities with ready walks, on the idle map; a tap starts there. */
+  cities?: { id: string; name: string; lat: number; lon: number }[];
+  onCityClick?: (name: string) => void;
 };
 
 const STYLE = process.env.NEXT_PUBLIC_MAP_STYLE ?? "https://tiles.openfreemap.org/styles/positron";
@@ -40,17 +43,18 @@ function fitPadding(container: HTMLElement | null, print: boolean) {
   return { top: 56, bottom: h > 560 ? 200 : 48, left: 40, right: 40 };
 }
 
-export default function WalkMap({ start, end, route = [], stops = [], candidates = [], searchBox, spokes = [], activeId, onStopClick, className, variant = "full", snakes = [], considered = [], drawRoute = false, dim = false }: MapProps) {
+export default function WalkMap({ start, end, route = [], stops = [], candidates = [], searchBox, spokes = [], activeId, onStopClick, className, variant = "full", snakes = [], considered = [], drawRoute = false, dim = false, cities = [], onCityClick }: MapProps) {
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<MlMap | null>(null);
   const markers = useRef<Marker[]>([]);
   const drawn = useRef(false);
+  const landed = useRef(new Set<string>());
   const loaded = useRef<Promise<void> | null>(null);
 
   useEffect(() => {
     if (!el.current || map.current) return;
     const print = variant === "print";
-    const initialPts = [...(start ? [start] : []), ...(end ? [end] : []), ...stops, ...route];
+    const initialPts = [...(start ? [start] : []), ...(end ? [end] : []), ...stops, ...route, ...cities];
     const initial = initialPts.length > 1
       ? { bounds: initialPts.reduce((b, q) => b.extend([q.lon, q.lat]), new LngLatBounds()), fitBoundsOptions: { padding: fitPadding(el.current, print), maxZoom: 16 } }
       : initialPts.length === 1 ? { center: [initialPts[0].lon, initialPts[0].lat] as [number, number], zoom: 14 } : { center: [0, 30] as [number, number], zoom: 1.4 };
@@ -112,11 +116,18 @@ export default function WalkMap({ start, end, route = [], stops = [], candidates
       };
       const near = (a: { lat: number; lon: number }, b: { lat: number; lon: number }) => Math.hypot((a.lon - b.lon) * 70, (a.lat - b.lat) * 111) < 0.05; // ~50 m
       if (start && !(stops[0] && near(start, stops[0]))) { const s = document.createElement("div"); s.className = "fn-start"; s.setAttribute("aria-label", "Start"); add(s, start.lat, start.lon); }
+      cities.forEach((c) => {
+        const b = document.createElement("button");
+        b.type = "button"; b.className = "fn-city"; b.textContent = c.name; b.setAttribute("aria-label", `Start a walk in ${c.name}`);
+        b.addEventListener("click", () => onCityClick?.(c.name));
+        add(b, c.lat, c.lon);
+      });
       if (end) { const e = document.createElement("div"); e.className = "fn-end"; e.setAttribute("aria-label", "End"); add(e, end.lat, end.lon); }
       stops.forEach((s, i) => {
         const d = document.createElement("button");
         d.type = "button";
-        d.className = variant === "print" ? "fn-stop fn-stop-sm" : "fn-stop";
+        d.className = variant === "print" ? "fn-stop fn-stop-sm" : landed.current.has(s.id) ? "fn-stop" : "fn-stop fn-land";
+        landed.current.add(s.id);
         d.textContent = String(i + 1);
         d.style.setProperty("--halo", colorFor(s.category));
         d.dataset.closed = String(!!s.closed);
@@ -133,18 +144,18 @@ export default function WalkMap({ start, end, route = [], stops = [], candidates
         }
       });
 
-      const pts = [...(start ? [start] : []), ...(end ? [end] : []), ...stops, ...route, ...candidates];
+      const pts = [...(start ? [start] : []), ...(end ? [end] : []), ...stops, ...route, ...candidates, ...cities];
       if (snakes.length && !route.length) return; // the trails own the camera while they play
       if (pts.length > 1) {
         const b = new LngLatBounds();
         pts.forEach((p) => b.extend([p.lon, p.lat]));
-        m.fitBounds(b, { padding: fitPadding(el.current, variant === "print"), maxZoom: 16, duration: variant === "print" ? 0 : 600 });
+        m.fitBounds(b, { padding: fitPadding(el.current, variant === "print"), maxZoom: cities.length && !start ? 5 : 16, duration: variant === "print" ? 0 : 600 });
       } else if (pts.length === 1) m.easeTo({ center: [pts[0].lon, pts[0].lat], zoom: 14 });
     };
     let cancelled = false;
     void loaded.current?.then(() => { if (!cancelled && map.current) apply(); });
     return () => { cancelled = true; };
-  }, [start, end, route, stops, candidates, searchBox, spokes, activeId, onStopClick, variant, snakes.length, considered, drawRoute, dim]);
+  }, [start, end, route, stops, candidates, searchBox, spokes, activeId, onStopClick, variant, snakes.length, considered, drawRoute, dim, cities, onCityClick]);
 
   // MapLibre's own stylesheet sets position on its container and outranks utilities, so the positioning lives on a wrapper.
   // The search animation, in the manner of a trips layer: a bright head runs along each probed street route with a

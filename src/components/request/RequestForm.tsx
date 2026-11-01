@@ -66,16 +66,21 @@ export function summarySentence(f: FormState): string {
 
 const chip = (on: boolean) => `flex min-h-12 items-center gap-2 rounded-full border-2 px-4 text-[15px] font-medium transition-colors ${on ? "border-ink bg-ink text-white" : "border-line bg-paper text-text hover:border-muted"}`;
 const tile = (on: boolean) => `flex min-h-[76px] flex-col items-center justify-center gap-1.5 rounded-xl border-2 px-2 text-[13px] font-medium transition-colors ${on ? "border-ink bg-ink-soft text-text" : "border-line bg-paper text-text hover:border-muted"}`;
-const input = "min-h-12 w-full rounded-xl border-[1.5px] border-line bg-paper px-3 text-[15px] text-text placeholder:text-muted";
-const h2 = "font-serif text-3xl font-medium tracking-tight md:font-sans md:text-[12px] md:font-semibold md:uppercase md:tracking-wider md:text-muted";
+const input = "min-h-12 w-full rounded-xl border-[1.5px] border-line bg-paper px-3 text-[16px] text-text placeholder:text-muted";
+const h2 = "font-serif text-3xl font-medium tracking-tight md:font-sans md:text-[15px] md:font-semibold md:tracking-normal";
 
-export default function RequestForm({ onSubmit, busy, initial }: { onSubmit: (req: ReturnType<typeof toRequest>) => void; busy: boolean; initial?: Partial<FormState> }) {
+export default function RequestForm({ onSubmit, busy, initial, startFrom }: { onSubmit: (req: ReturnType<typeof toRequest>) => void; busy: boolean; initial?: Partial<FormState>; startFrom?: string }) {
   const [f, setF] = useState<FormState>({ ...initialForm, ...initial });
+  // A city pin on the map sets the start: adopted during render, the React way for state that follows a prop.
+  const [adopted, setAdopted] = useState<string | undefined>(undefined);
+  if (startFrom && startFrom !== adopted) { setAdopted(startFrom); setF((s) => ({ ...s, start: startFrom })); }
   const [step, setStep] = useState(0);
   const [phone, setPhone] = useState(false);
   const [locating, setLocating] = useState(false);
   const [nudge, setNudge] = useState<string | null>(null);
   const [locateNote, setLocateNote] = useState<string | null>(null);
+  const [dir, setDir] = useState<"in" | "back">("in");
+  const stepAnim = phone ? (dir === "back" ? "fn-step-back" : "fn-step-in") : "";
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 767px)");
     const on = () => setPhone(mq.matches);
@@ -107,7 +112,7 @@ export default function RequestForm({ onSubmit, busy, initial }: { onSubmit: (re
       if (phone && step === 3 && !f.interests.length) { setNudge("Pick at least one thing you love."); return; }
       if (!phone && !canSubmit) { setNudge(f.start.trim().length < 2 ? "Add a start to continue." : "Pick at least one thing you love."); return; }
       setNudge(null);
-      if (phone && step < STEPS.length - 1) setStep(step + 1); else submit();
+      if (phone && step < STEPS.length - 1) { setDir("in"); setStep(step + 1); } else submit();
     }} aria-busy={busy}>
       {phone ? (
         <div className="sticky top-0 z-10 -mx-6 flex items-center justify-between bg-paper px-6 py-2 text-[13px] text-muted">
@@ -118,7 +123,7 @@ export default function RequestForm({ onSubmit, busy, initial }: { onSubmit: (re
       <p className="font-serif text-[26px] leading-tight tracking-tight md:text-[28px]">{summary}</p>
 
       {show(0) ? (
-        <section className="flex flex-col gap-4" aria-labelledby="q-where">
+        <section className={`flex flex-col gap-4 ${stepAnim}`} aria-labelledby="q-where">
           <h2 id="q-where" className={h2}>Where?</h2>
           <div className="flex gap-2">
             <label className="flex-1"><span className="sr-only">Start</span><input className={input} placeholder="Start: a place, an address, or use your location" value={f.start} onChange={(e) => set("start", e.target.value)} autoComplete="off" required /></label>
@@ -135,7 +140,7 @@ export default function RequestForm({ onSubmit, busy, initial }: { onSubmit: (re
       ) : null}
 
       {show(1) ? (
-        <section className="flex flex-col gap-4" aria-labelledby="q-long">
+        <section className={`flex flex-col gap-4 ${stepAnim}`} aria-labelledby="q-long">
           <h2 id="q-long" className={h2}>How long?</h2>
           <div className="flex flex-wrap gap-2" role="group" aria-label="Duration">
             {DURATIONS.map((m) => <button type="button" key={m} className={chip(f.minutes === m)} aria-pressed={f.minutes === m} onClick={() => set("minutes", m)}>{m < 60 ? `${m} min` : m % 60 ? `${Math.floor(m / 60)}½ h` : `${m / 60} h`}</button>)}
@@ -145,14 +150,14 @@ export default function RequestForm({ onSubmit, busy, initial }: { onSubmit: (re
       ) : null}
 
       {show(2) ? (
-        <section className="flex flex-col gap-4" aria-labelledby="q-who">
+        <section className={`flex flex-col gap-4 ${stepAnim}`} aria-labelledby="q-who">
           <h2 id="q-who" className={h2}>Who is walking?</h2>
           <p className="text-[15px] text-muted md:hidden">Sets the pace, the breaks and whether we avoid steps.</p>
           <div className="flex flex-wrap gap-2" role="group" aria-label="Companions">
             {COMPANIONS.map((c) => { const I = Icon[c.icon]; const on = f.companions.includes(c.key); return <button type="button" key={c.key} className={chip(on)} aria-pressed={on} onClick={() => toggle("companions", c.key)}><I width={18} height={18} />{c.label}</button>; })}
           </div>
           <label className="flex items-center gap-3 text-[14px] text-muted">Pace
-            <select className="min-h-10 rounded-lg border-[1.5px] border-line bg-paper px-2 text-text" value={f.pace} onChange={(e) => set("pace", e.target.value as FormState["pace"])}>
+            <select className="min-h-10 rounded-lg border-[1.5px] border-line bg-paper px-2 text-[16px] text-text" value={f.pace} onChange={(e) => set("pace", e.target.value as FormState["pace"])}>
               <option value="auto">Set by who is walking</option><option value="relaxed">Relaxed</option><option value="normal">Normal</option><option value="brisk">Brisk</option>
             </select>
           </label>
@@ -160,7 +165,7 @@ export default function RequestForm({ onSubmit, busy, initial }: { onSubmit: (re
       ) : null}
 
       {show(3) ? (
-        <section className="flex flex-col gap-4" aria-labelledby="q-love">
+        <section className={`flex flex-col gap-4 ${stepAnim}`} aria-labelledby="q-love">
           <h2 id="q-love" className={h2}>What you love</h2>
           <p className="text-[14px] text-muted">Tap everything that applies; the first you tap counts most.</p>
           <div className="grid grid-cols-3 gap-2.5 md:grid-cols-6" role="group" aria-label="Interests">
@@ -170,27 +175,27 @@ export default function RequestForm({ onSubmit, busy, initial }: { onSubmit: (re
       ) : null}
 
       {show(4) ? (
-        <section className="flex flex-col gap-4" aria-labelledby="q-when">
+        <section className={`flex flex-col gap-4 ${stepAnim}`} aria-labelledby="q-when">
           <h2 id="q-when" className={h2}>When?</h2>
           <div className="flex flex-wrap gap-2">
             <button type="button" className={chip(!f.date)} aria-pressed={!f.date} onClick={() => { set("date", ""); set("time", ""); }}>Now</button>
-            <label className="flex flex-col gap-1 text-[12px] font-semibold uppercase tracking-wider text-muted">Day<input type="date" className={`${input} w-auto normal-case tracking-normal`} value={f.date} onChange={(e) => set("date", e.target.value)} /></label>
-            <label className="flex flex-col gap-1 text-[12px] font-semibold uppercase tracking-wider text-muted">Time<input type="time" className={`${input} w-auto normal-case tracking-normal`} value={f.time} onChange={(e) => set("time", e.target.value)} disabled={!f.date} /></label>
+            <label className="flex flex-col gap-1 text-[13px] font-medium text-muted">Day<input type="date" className={`${input} w-auto`} value={f.date} onChange={(e) => set("date", e.target.value)} /></label>
+            <label className="flex flex-col gap-1 text-[13px] font-medium text-muted">Time<input type="time" className={`${input} w-auto`} value={f.time} onChange={(e) => set("time", e.target.value)} disabled={!f.date} /></label>
           </div>
           <p className="text-[14px] text-muted">So opening hours and the weather match the day.</p>
         </section>
       ) : null}
 
       {show(5) ? (
-        <section className="flex flex-col gap-4" aria-labelledby="q-else">
+        <section className={`flex flex-col gap-4 ${stepAnim}`} aria-labelledby="q-else">
           <h2 id="q-else" className={h2}>Anything else?</h2>
-          <input className={input} placeholder="avoid busy roads · end near a pub · we've seen the abbey" value={f.notes} onChange={(e) => set("notes", e.target.value)} maxLength={500} aria-label="Anything else" />
+          <input className={input} placeholder="For example: avoid busy roads, end near a pub, we have seen the abbey…" value={f.notes} onChange={(e) => set("notes", e.target.value)} maxLength={500} aria-label="Anything else" />
         </section>
       ) : null}
 
       {nudge ? <p role="alert" className="rounded-xl bg-soft px-4 py-3 text-[14px] font-medium text-amber">{nudge}</p> : null}
       <div className="mt-auto flex gap-3">
-        {phone && step > 0 ? <button type="button" className="min-h-[52px] flex-1 rounded-2xl border-2 border-line font-semibold" onClick={() => { setNudge(null); setStep(step - 1); }}>Back</button> : null}
+        {phone && step > 0 ? <button type="button" className="min-h-[52px] flex-1 rounded-2xl border-2 border-line font-semibold" onClick={() => { setNudge(null); setDir("back"); setStep(step - 1); }}>Back</button> : null}
         <button type="submit" className="min-h-[52px] flex-[2] rounded-2xl bg-text font-semibold text-paper disabled:opacity-40" disabled={busy}>
           {phone && step < STEPS.length - 1 ? `Next: ${STEPS[step + 1].toLowerCase()}` : busy ? "Building…" : "Build my walk"}
         </button>

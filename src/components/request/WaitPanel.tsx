@@ -37,7 +37,7 @@ export default function WaitPanel({ stages, facts, startedAt, error, revealed = 
                 : active ? <span className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-ink"><span className="fn-breathe h-2.5 w-2.5 rounded-full bg-ink" /></span>
                 : <span className="h-6 w-6 rounded-full border-2 border-line" />}
               <span className={`flex-1 ${active ? "font-semibold" : ""}`}>{LABELS[s]}{d ? <span className="font-normal text-muted">: {detailFor(s)}</span> : null}</span>
-              {d?.ms !== undefined ? <span className="text-[13px] text-muted">{d.detail?.cached && d.ms === 0 ? "from cache" : d.ms < 1000 ? "<1 s" : `${Math.round(d.ms / 1000)} s`}</span> : null}
+              {d?.ms !== undefined ? <span className="tabular text-[13px] text-muted">{d.detail?.cached && d.ms === 0 ? "from cache" : d.ms < 1000 ? "<1 s" : `${Math.round(d.ms / 1000)} s`}</span> : null}
             </li>
           );
         })}
