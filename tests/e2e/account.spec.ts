@@ -20,7 +20,7 @@ test("the passes page says the number of walks and never 'unlimited'", async ({ 
   const cards = page.locator(".grid section");
   await expect(cards).toHaveCount(2);
   for (const card of await cards.all()) {
-    await expect(card.getByText(/up to \d+ walks/i)).toBeVisible();
+    await expect(card.getByText(/up to \d+ walks|fair use is \d+ a day/i)).toBeVisible(); // each card states a number
     await expect(card.getByText(/unlimited/i)).toHaveCount(0); // the page explains the word; the offers never use it
   }
 });
