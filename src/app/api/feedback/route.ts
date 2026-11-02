@@ -4,9 +4,12 @@ import { feedback } from "@/lib/db/schema";
 import { Feedback } from "@/lib/events";
 import { logEvent } from "@/lib/log";
 import { sendMail } from "@/lib/mail";
+import { clientIpKey } from "@/lib/ip";
+import { allow } from "@/lib/ratelimit";
 
 /** The feedback button. Stored with its context; the owner is emailed when FEEDBACK_TO is set. */
 export async function POST(req: Request) {
+  if (!allow(`feedback-ip:${clientIpKey(req)}`, 5, 3_600_000)) return Response.json({ error: "Thank you, that is enough for one hour." }, { status: 429 });
   try {
     const f = Feedback.parse(await req.json());
     const db = getDb();

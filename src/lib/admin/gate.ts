@@ -26,5 +26,5 @@ export async function requireAdmin(): Promise<void> {
 export async function setAdminCookie(on: boolean): Promise<void> {
   const jar = await cookies();
   if (!on) { jar.delete(ADMIN_COOKIE); return; }
-  jar.set(ADMIN_COOKIE, hashSecret(process.env.ADMIN_TOKEN ?? ""), { httpOnly: true, sameSite: "strict", secure: (process.env.APP_URL ?? "").startsWith("https"), path: "/", maxAge: 30 * 86_400 });
+  jar.set(ADMIN_COOKIE, hashSecret(process.env.ADMIN_TOKEN ?? ""), { httpOnly: true, sameSite: "strict", secure: process.env.NODE_ENV === "production" || (process.env.APP_URL ?? "").startsWith("https"), path: "/", maxAge: 30 * 86_400 });
 }

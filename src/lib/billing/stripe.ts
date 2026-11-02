@@ -94,12 +94,26 @@ export async function handleWebhook(raw: string, signature: string): Promise<{ h
   const event = s.webhooks.constructEvent(raw, signature, secret);
   const fresh = await db.insert(stripeEvents).values({ id: event.id, type: event.type }).onConflictDoNothing().returning({ id: stripeEvents.id });
   if (!fresh.length) return { handled: "duplicate" };
+  try {
+    await applyEvent(event, s);
+  } catch (e) {
+    await db.delete(stripeEvents).where(eq(stripeEvents.id, event.id)); // let Stripe retry; the id must not look handled
+    throw e;
+  }
+  return { handled: event.type };
+}
+
+async function applyEvent(event: Stripe.Event, s: Stripe): Promise<void> {
+  const db = getDb();
+  if (!db) return;
   switch (event.type) {
-    case "checkout.session.completed": {
+    case "checkout.session.completed":
+    case "checkout.session.async_payment_succeeded": {
       const cs = event.data.object;
       const userId = cs.metadata?.userId ?? cs.client_reference_id;
       const plan = cs.metadata?.plan;
       if (!userId || (plan !== "week" && plan !== "month")) break;
+      if (cs.payment_status !== "paid") break; // a delayed payment method completes later, with async_payment_succeeded
       if (plan === "week") {
         const now = new Date();
         await db.update(users).set({ plan: "week", planStatus: "active", planStartsAt: now, planEndsAt: new Date(now.getTime() + 7 * 86_400_000), subscriptionId: null }).where(eq(users.id, userId));
@@ -117,5 +131,4 @@ export async function handleWebhook(raw: string, signature: string): Promise<{ h
       break;
     }
   }
-  return { handled: event.type };
 }

@@ -13,7 +13,7 @@ rsync -a compose.prod.yml deploy/ scripts/maintenance.sh "$PROD_SSH:$dir/" 2>/de
 ssh "$PROD_SSH" "chmod +x '$dir/deploy/update.sh' '$dir/scripts/maintenance.sh' \
   && cp '$dir/deploy/footnote-update.service' '$dir/deploy/footnote-update.timer' /etc/systemd/system/ \
   && systemctl daemon-reload && systemctl enable --now footnote-update.timer \
-  && [ -f '$dir/.env' ] || cp '$dir/deploy/env.production.example' '$dir/.env' && chmod 600 '$dir/.env'"
+  && if [ ! -f '$dir/.env' ]; then cp '$dir/deploy/env.production.example' '$dir/.env'; fi && chmod 600 '$dir/.env'"
 cat <<EOF
 
 Installed under $dir on $PROD_SSH. By hand, on the server:

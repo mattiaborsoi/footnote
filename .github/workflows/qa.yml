@@ -20,7 +20,8 @@ permissions:
 
 jobs:
   qa:
-    if: github.event.pull_request.draft == false && github.actor != 'dependabot[bot]'
+    # The agent may run curl and docker with the OAuth token in the job: only the owner's own pull requests get it.
+    if: github.event.pull_request.draft == false && github.event.pull_request.user.login == github.repository_owner
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
