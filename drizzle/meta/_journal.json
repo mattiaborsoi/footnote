@@ -43,6 +43,13 @@
       "when": 1793540119118,
       "tag": "0005_purple_captain_universe",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793633607833,
+      "tag": "0006_cheerful_captain_marvel",
+      "breakpoints": true
     }
   ]
 }

@@ -106,6 +106,9 @@ export const cities = pgTable("cities", {
   scoutedAt: timestamp("scouted_at", { withTimezone: true }),
   sources: integer("sources").notNull().default(0),
   placesAt: timestamp("places_at", { withTimezone: true }),
+  /** Which selector set and theme set filled the caches: a change to either makes the cache stale, whatever its date. */
+  placesVersion: integer("places_version").notNull().default(0),
+  scoutVersion: integer("scout_version").notNull().default(0),
   status: text("status").notNull().default("pending"),
 });
 

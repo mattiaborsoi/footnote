@@ -20,8 +20,22 @@ export function dedupe(list: Scored[]): Scored[] {
   return out;
 }
 
-export function rank(cands: Candidate[], start: LatLng, end: LatLng | null, corridorM: number, keep = 50): Scored[] {
-  return dedupe(cands.map((c) => ({ ...c, score: score(c, start, end, corridorM) }))).slice(0, keep);
+/**
+ * The best `keep` candidates by score. Places that answer the walker's own interests (`anchor`) hold at least a
+ * third of the pool: a game shop with one fact must not be crowded out by well-documented sights of other kinds,
+ * or the curator never sees what was asked for.
+ */
+export function rank(cands: Candidate[], start: LatLng, end: LatLng | null, corridorM: number, keep = 50, anchor?: (c: Candidate) => boolean): Scored[] {
+  const all = dedupe(cands.map((c) => ({ ...c, score: score(c, start, end, corridorM) })));
+  if (!anchor) return all.slice(0, keep);
+  const anchors = all.filter(anchor);
+  const quota = Math.min(anchors.length, Math.ceil(keep / 3));
+  const top = all.slice(0, keep);
+  const missing = anchors.filter((a) => !top.includes(a)).slice(0, Math.max(0, quota - top.filter(anchor).length));
+  if (!missing.length) return top;
+  const others = top.filter((c) => !anchor(c));
+  const dropped = new Set(others.slice(others.length - missing.length));
+  return [...top.filter((c) => !dropped.has(c)), ...missing].sort((a, b) => b.score - a.score);
 }
 
 /** Without a model: the best few, spread across categories, in walking order. */

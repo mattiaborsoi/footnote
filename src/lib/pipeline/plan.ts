@@ -11,6 +11,7 @@ import { arrivalTimes, isLateHour, localAsUtc, openAt, openState, TIMED_CATEGORI
 import { weatherFor } from "../providers/openmeteo";
 import { loadSpotsInBbox, mergeScouted } from "../scout/spots";
 import { cachedPlacesFor, matchesInterest, registerCity } from "../scout/places";
+import type { Candidate } from "../providers/types";
 import { nearestStations } from "../providers/overpass";
 import type { Providers, Walk } from "./walk";
 
@@ -64,7 +65,13 @@ export async function planWalk(raw: unknown, p: Providers, llm: Llm, emit: (e: S
   const endAt = new Date(startAt.getTime() + intent.minutes * 60_000);
   const cachedPlaces = await cachedPlacesFor(bbox, start, intent.interests, intent.language).catch(() => null);
   const [mapped, scouted, weather] = await Promise.all([
-    cachedPlaces ?? p.places.search(bbox, selectors, intent.language),
+    cachedPlaces ?? p.places.search(bbox, selectors, intent.language).catch(async (err: unknown) => {
+      // The live map server is down: an older cache of this city beats no walk at all.
+      const stale = await cachedPlacesFor(bbox, start, intent.interests, intent.language, { stale: true }).catch(() => null);
+      if (!stale) throw err;
+      logEvent("places.stale", { error: String(err).slice(0, 80) });
+      return stale;
+    }),
     loadSpotsInBbox(bbox).catch(() => []),
     weatherFor(start, startAt, endAt).catch(() => null),
   ]);
@@ -94,7 +101,8 @@ export async function planWalk(raw: unknown, p: Providers, llm: Llm, emit: (e: S
   // Longer walks deserve more stops and a wider pool to choose from.
   const targetStops = Math.min(12, Math.max(4, Math.round(intent.minutes / 20)));
   // A pool of about seven places per stop wanted: enough choice, not a long read for the model.
-  const ranked = rank(withHours, start, end, corridorM, Math.min(60, 18 + targetStops * 3)).map((c) => ({ ...c, minutesAway: minutesFrom(start, c, intent.pace) }));
+  const askedFor = (c: Candidate) => intent.interests.some((i) => matchesInterest(i, c));
+  const ranked = rank(withHours, start, end, corridorM, Math.min(60, 18 + targetStops * 3), askedFor).map((c) => ({ ...c, minutesAway: minutesFrom(start, c, intent.pace) }));
   // An interest with under three real matches in the pool: the curator is told, so it chooses fewer stops and says so.
   const thin = intent.interests.filter((i) => ranked.filter((c) => matchesInterest(i, c)).length < 3);
   emit({ stage: "searching", ms: Math.round(t() - t0), detail: { found: found.length, cached: !!cachedPlaces, scouted: scouted.length, start: { lat: start.lat, lon: start.lon }, end: end ? { lat: end.lat, lon: end.lon } : null, bbox, sample: ranked.flatMap((c) => c.facts.filter(readsAsSentence).slice(0, 1).map((f) => `${c.name}: ${f.replace(/^(Recommended on "[^"]*"|Description|Inscription): /, "")}`)).slice(0, 6), closed: found.length - withHours.length, kept: ranked.length, weather: weather?.summary ?? null, candidates: ranked.map((c) => ({ id: c.id, lat: c.lat, lon: c.lon })) } });

@@ -3,9 +3,34 @@ import type { Candidate, PlacesProvider } from "./types";
 import { displayName } from "../names";
 import { distanceM, type LatLng } from "../geo";
 
-const BASE = process.env.OVERPASS_URL ?? "https://overpass-api.de/api/interpreter";
-
 type Element = { type: string; id: number; lat?: number; lon?: number; center?: { lat: number; lon: number }; tags?: Record<string, string> };
+
+/** Comma-separated endpoints, tried in order: the public server answers 502 or times out under load, and a mirror usually does not. */
+const ENDPOINTS = (process.env.OVERPASS_URL ?? "https://overpass-api.de/api/interpreter,https://overpass.kumi.systems/api/interpreter,https://overpass.private.coffee/api/interpreter").split(",").map((u) => u.trim()).filter(Boolean);
+const BAD_FOR_MS = 120_000;
+const badUntil = new Map<string, number>();
+
+/** POST a query to the first endpoint that answers; an endpoint that fails is skipped for two minutes. */
+export async function postQuery(body: string, timeoutS: number, endpoints = ENDPOINTS, fetchImpl: typeof fetch = fetch): Promise<Element[]> {
+  const now = Date.now();
+  const order = [...endpoints.filter((u) => (badUntil.get(u) ?? 0) <= now), ...endpoints.filter((u) => (badUntil.get(u) ?? 0) > now)];
+  let lastError: unknown = new Error("places: no endpoint");
+  for (const url of order) {
+    try {
+      const res = await fetchImpl(url, { method: "POST", headers: { "User-Agent": USER_AGENT }, body: `data=${encodeURIComponent(body)}`, signal: AbortSignal.timeout((timeoutS + 15) * 1000) });
+      if (!res.ok) throw new Error(`places ${res.status}`);
+      const data = (await res.json()) as { elements?: Element[]; remark?: string };
+      if (!data.elements) throw new Error(`places: ${data.remark ?? "no elements"}`);
+      badUntil.delete(url);
+      return data.elements;
+    } catch (err) {
+      badUntil.set(url, Date.now() + BAD_FOR_MS);
+      lastError = err;
+    }
+  }
+  throw lastError;
+}
+
 
 /** Facts are the OSM tags worth telling a story with, rendered as short plain lines. */
 export function factsFromTags(t: Record<string, string>): string[] {
@@ -26,10 +51,8 @@ export const overpass: PlacesProvider = {
     const body = `[out:json][timeout:${opts.timeoutS ?? 25}];(${selectors.map((s) => `nwr${s}["name"](${b});`).join("")});out center tags;`;
     return cached(`ovp:${body}`, 3600_000, () =>
       throttled("overpass", 1000, async () => {
-        const res = await fetch(BASE, { method: "POST", headers: { "User-Agent": USER_AGENT }, body: `data=${encodeURIComponent(body)}` });
-        if (!res.ok) throw new Error(`places ${res.status}`);
-        const data = (await res.json()) as { elements: Element[] };
-        return data.elements.flatMap((e) => {
+        const elements = await postQuery(body, opts.timeoutS ?? 25);
+        return elements.flatMap((e) => {
           const lat = e.lat ?? e.center?.lat, lon = e.lon ?? e.center?.lon, tags = e.tags ?? {};
           if (lat === undefined || lon === undefined || !tags.name) return [];
           const { name, localName } = displayName(tags, language);
@@ -69,10 +92,8 @@ export async function nearestStations(points: LatLng[], language = "en"): Promis
   const body = `[out:json][timeout:15];(${around});out center tags;`;
   const stations = await cached(`stn:${body}`, 24 * 3600_000, () =>
     throttled("overpass", 1000, async () => {
-      const res = await fetch(BASE, { method: "POST", headers: { "User-Agent": USER_AGENT }, body: `data=${encodeURIComponent(body)}` });
-      if (!res.ok) throw new Error(`stations ${res.status}`);
-      const data = (await res.json()) as { elements: Element[] };
-      return data.elements.flatMap((e) => {
+      const elements = await postQuery(body, 15);
+      return elements.flatMap((e) => {
         const lat = e.lat ?? e.center?.lat, lon = e.lon ?? e.center?.lon, tags = e.tags ?? {};
         if (lat === undefined || lon === undefined || !tags.name) return [];
         return [{ lat, lon, name: displayName(tags, language).name || tags.name }];
