@@ -1,6 +1,7 @@
 "use client";
 import { LngLatBounds, Map as MlMap, Marker, NavigationControl, setWorkerUrl, type GeoJSONSource, type PositionAnchor } from "maplibre-gl";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Icon } from "@/components/icons";
 import { colorFor } from "@/lib/client/colors";
 
 export type MapStop = { id: string; name: string; category: string; lat: number; lon: number; closed?: boolean; minutesFromPrevious?: number };
@@ -32,6 +33,12 @@ export type MapProps = {
 };
 
 const STYLE = process.env.NEXT_PUBLIC_MAP_STYLE ?? "https://tiles.openfreemap.org/styles/positron";
+/** Satellite imagery behind the same roads and labels (a hybrid view). Esri's world imagery by default, with its attribution; swap the tiles by environment. */
+const SATELLITE_TILES = process.env.NEXT_PUBLIC_SATELLITE_TILES ?? "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
+const SATELLITE_ATTRIBUTION = process.env.NEXT_PUBLIC_SATELLITE_ATTRIBUTION ?? "Imagery © Esri, Maxar, Earthstar Geographics, and the GIS User Community";
+const SATELLITE_KEY = "footnote.map.satellite";
+/** The base map's own layers that imagery replaces: the ground, water and buildings. Roads and names stay on top, so the view reads as a map. */
+const GROUND_LAYER_TYPES = new Set(["background", "fill", "fill-extrusion", "hillshade", "raster"]);
 // The bundler cannot serve MapLibre's inline worker; its worker and shared modules are copied to /public at dev and build time.
 if (typeof window !== "undefined") setWorkerUrl("/maplibre-gl-worker.mjs");
 
@@ -50,6 +57,23 @@ export default function WalkMap({ start, end, route = [], stops = [], candidates
   const drawn = useRef(false);
   const landed = useRef(new Set<string>());
   const loaded = useRef<Promise<void> | null>(null);
+  const [satellite, setSatellite] = useState(false);
+  const groundLayers = useRef<string[]>([]);
+
+  /** Imagery on or off: the raster shows and the base map's ground layers hide, or the reverse. */
+  const applySatellite = useCallback((m: MlMap, on: boolean) => {
+    if (!m.getLayer("satellite")) return;
+    m.setLayoutProperty("satellite", "visibility", on ? "visible" : "none");
+    for (const id of groundLayers.current) if (m.getLayer(id)) m.setLayoutProperty(id, "visibility", on ? "none" : "visible");
+  }, []);
+  const toggleSatellite = useCallback(() => {
+    setSatellite((on) => {
+      const next = !on;
+      try { localStorage.setItem(SATELLITE_KEY, next ? "1" : "0"); } catch { /* fine */ }
+      if (map.current) applySatellite(map.current, next);
+      return next;
+    });
+  }, [applySatellite]);
 
   useEffect(() => {
     if (!el.current || map.current) return;
@@ -61,6 +85,16 @@ export default function WalkMap({ start, end, route = [], stops = [], candidates
     const m = new MlMap({ container: el.current, style: STYLE, ...initial, attributionControl: { compact: true }, interactive: !print, canvasContextAttributes: { preserveDrawingBuffer: print } });
     if (!print && window.matchMedia("(min-width: 768px)").matches) m.addControl(new NavigationControl({ showCompass: false }), "top-right");
     loaded.current = new Promise<void>((resolve) => m.once("load", () => {
+      // Imagery sits under everything the base map draws; the ground layers it replaces are remembered so the toggle can hide them.
+      const styleLayers = m.getStyle().layers ?? [];
+      groundLayers.current = styleLayers.filter((l) => GROUND_LAYER_TYPES.has(l.type)).map((l) => l.id);
+      m.addSource("satellite", { type: "raster", tiles: [SATELLITE_TILES], tileSize: 256, maxzoom: 19, attribution: SATELLITE_ATTRIBUTION });
+      m.addLayer({ id: "satellite", type: "raster", source: "satellite", layout: { visibility: "none" }, paint: { "raster-saturation": -0.15 } }, styleLayers[0]?.id);
+      if (!print) {
+        let remembered = false;
+        try { remembered = localStorage.getItem(SATELLITE_KEY) === "1"; } catch { /* fine */ }
+        if (remembered) { setSatellite(true); applySatellite(m, true); }
+      }
       m.addSource("search", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       m.addLayer({ id: "search-fill", type: "fill", source: "search", paint: { "fill-color": "#1e3a8a", "fill-opacity": 0.06 } });
       m.addLayer({ id: "search-line", type: "line", source: "search", paint: { "line-color": "#1e3a8a", "line-opacity": 0.35, "line-width": 2, "line-dasharray": [3, 3] } });
@@ -83,7 +117,7 @@ export default function WalkMap({ start, end, route = [], stops = [], candidates
     return () => { m.remove(); map.current = null; loaded.current = null; };
     // The initial camera only uses what is known at mount; later changes go through the sync effect below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [variant]);
+  }, [variant, applySatellite]);
 
   useEffect(() => {
     const m = map.current;
@@ -235,6 +269,12 @@ export default function WalkMap({ start, end, route = [], stops = [], candidates
   return (
     <div className={className ?? "h-full w-full"} role="region" aria-label="Map">
       <div ref={el} className="h-full w-full" />
+      {variant !== "print" ? (
+        <button type="button" onClick={toggleSatellite} aria-pressed={satellite} aria-label={satellite ? "Show the map" : "Show satellite imagery"} title={satellite ? "Map" : "Satellite"}
+          className={`absolute right-3 top-3 z-10 flex h-11 w-11 items-center justify-center rounded-full shadow md:top-[92px] ${satellite ? "bg-[#1e3a8a] text-white" : "bg-white text-[#1e3a8a]"}`}>
+          <Icon.layers width={20} height={20} />
+        </button>
+      ) : null}
     </div>
   );
 }

@@ -28,7 +28,7 @@ export default function WalkView({ initial, owned = false }: { initial: StoredWa
   const gpxHref = useMemo(() => `data:application/gpx+xml;charset=utf-8,${encodeURIComponent(walk.gpx)}`, [walk.gpx]);
   const km = (walk.distanceM / 1000).toFixed(1);
   const when = walk.startsAt ? new Date(walk.startsAt + ":00Z") : new Date(walk.createdAt);
-  const whenLabel = when.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: walk.startsAt ? "UTC" : undefined }) + (walk.startsAt ? `, ${walk.startsAt.slice(11, 16)}` : "");
+  const whenLabel = when.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" }) + (walk.startsAt ? `, ${walk.startsAt.slice(11, 16)}` : "");
 
   const refresh = async () => {
     setRefreshing(true);
