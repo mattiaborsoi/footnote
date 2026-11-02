@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
-import { decide, hasActivePlan, walkWeight } from "@/lib/account/allowance";
+import { decide, hasActivePlan } from "@/lib/account/allowance";
 import type { User } from "@/lib/auth";
 
 // The rules under test are the repo defaults, whatever the host's environment says (the test machine lifts its own limit).
@@ -22,11 +22,6 @@ describe("decide", () => {
     expect(decide(week, 12, now, 10)).toMatchObject({ allowed: false, next: null });
     expect(decide(week, 12, now, 10).message).toMatch(/fair use/);
     expect(decide(week, 70, now, 2)).toMatchObject({ allowed: false, next: "plans" });
-  });
-  it("counts a walk over two hours as two", () => {
-    expect(walkWeight(90)).toBe(1);
-    expect(walkWeight(120)).toBe(1);
-    expect(walkWeight(121)).toBe(2);
   });
   it("treats an expired pass as no pass", () => {
     expect(hasActivePlan(week, new Date("2026-03-20T00:00:00Z"))).toBe(false);

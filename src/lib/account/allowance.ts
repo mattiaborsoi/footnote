@@ -2,11 +2,13 @@ import { and, eq, gt, sql } from "drizzle-orm";
 import type { User } from "../auth";
 import { getDb } from "../db";
 import { walks } from "../db/schema";
+import { envNumber } from "../env";
+
+const num = (name: string, fallback: number) => envNumber(name, fallback, 1);
 
 export type Plan = "none" | "week" | "month";
 export type Allowance = { allowed: boolean; used: number; limit: number; plan: Plan; endsAt: string | null; next: "signin" | "plans" | null; message: string };
 
-const num = (name: string, fallback: number) => { const n = Number(process.env[name]); return Number.isFinite(n) && n > 0 ? n : fallback; };
 /** Free walks before a pass: two, one to try at home and one for the trip. Changed without a deploy. */
 export const trialWalks = () => num("TRIAL_WALKS", 2);
 /** What one walk costs to make, as shown to people: computing and services at our volume, kept honest by hand from measured cost. */
@@ -14,9 +16,8 @@ export const walkCostLabel = () => process.env.WALK_COST_LABEL ?? "about 40p";
 /** The week pass holds as many walks as a week holds at fair use (ten a day); the monthly plan is "up to N". */
 export const dailyFairUse = () => num("WEEK_PASS_DAILY_FAIR_USE", 10);
 export const planWalks = (plan: Plan) => (plan === "week" ? num("PLAN_WEEK_WALKS", 7 * dailyFairUse()) : plan === "month" ? num("PLAN_MONTH_WALKS", 25) : trialWalks());
-/** A walk over two hours costs about twice the model work, so it counts as two. */
+/** A walk over two hours costs about twice the model work, so it counts as two (see `weighted` below). */
 export const LONG_WALK_MINUTES = 120;
-export const walkWeight = (totalMinutes: number) => (totalMinutes > LONG_WALK_MINUTES ? 2 : 1);
 
 export function hasActivePlan(user: User | null, now = new Date()): user is User & { planEndsAt: Date } {
   return !!user && user.plan !== "none" && (user.planStatus === "active" || user.planStatus === "past_due") && !!user.planEndsAt && user.planEndsAt > now;

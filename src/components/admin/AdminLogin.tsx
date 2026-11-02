@@ -1,6 +1,8 @@
 "use client";
 import { useRouter } from "next/navigation";
+import { postJson } from "@/lib/client/http";
 import { useState } from "react";
+import { btn } from "@/components/ui";
 
 export default function AdminLogin() {
   const router = useRouter();
@@ -9,9 +11,7 @@ export default function AdminLogin() {
   const [busy, setBusy] = useState(false);
   const go = async (e: React.FormEvent) => {
     e.preventDefault(); setBusy(true); setError(null);
-    const res = await fetch("/api/admin/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token }) });
-    if (res.ok) { router.replace("/admin"); router.refresh(); return; }
-    setError(((await res.json().catch(() => ({}))) as { error?: string }).error ?? "Could not sign in."); setBusy(false);
+    try { await postJson("/api/admin/login", { token }); router.replace("/admin"); router.refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Could not sign in."); setBusy(false); }
   };
   return (
     <form className="flex flex-col gap-4" onSubmit={go}>
@@ -21,7 +21,7 @@ export default function AdminLogin() {
         <input className="min-h-12 w-full rounded-xl border-[1.5px] border-line bg-paper px-4 text-[17px] normal-case tracking-normal" type="password" autoComplete="off" value={token} onChange={(e) => setToken(e.target.value)} autoFocus required />
       </label>
       {error ? <p role="alert" className="text-[14px] font-medium text-amber">{error}</p> : null}
-      <button type="submit" disabled={busy} className="min-h-[52px] rounded-2xl bg-text font-semibold text-paper disabled:opacity-40">Open</button>
+      <button type="submit" disabled={busy} className={btn.big}>Open</button>
     </form>
   );
 }

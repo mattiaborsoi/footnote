@@ -35,7 +35,6 @@ const STYLE = process.env.NEXT_PUBLIC_MAP_STYLE ?? "https://tiles.openfreemap.or
 // The bundler cannot serve MapLibre's inline worker; its worker and shared modules are copied to /public at dev and build time.
 if (typeof window !== "undefined") setWorkerUrl("/maplibre-gl-worker.mjs");
 
-/** The map from the brief: one ink route with a white casing, numbered white discs with interest halos, time pills per leg, a square start and a diamond end. */
 /** Room around the route: a tall map (desktop) keeps the bottom clear for the summary card; a short one (phone) cannot afford it. */
 function fitPadding(container: HTMLElement | null, print: boolean) {
   if (print) return 36;
@@ -43,6 +42,7 @@ function fitPadding(container: HTMLElement | null, print: boolean) {
   return { top: 56, bottom: h > 560 ? 200 : 48, left: 40, right: 40 };
 }
 
+/** The map from the brief: one ink route with a white casing, numbered white discs with interest halos, time pills per leg, a square start and a diamond end. */
 export default function WalkMap({ start, end, route = [], stops = [], candidates = [], searchBox, spokes = [], activeId, onStopClick, className, variant = "full", snakes = [], considered = [], drawRoute = false, dim = false, cities = [], onCityClick }: MapProps) {
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<MlMap | null>(null);

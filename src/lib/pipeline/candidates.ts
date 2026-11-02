@@ -25,19 +25,6 @@ export function rank(cands: Candidate[], start: LatLng, end: LatLng | null, corr
 }
 
 /** Without a model: the best few, spread across categories, in walking order. */
-export function pickAndOrder(ranked: Scored[], start: LatLng, end: LatLng | null, max: number): Scored[] {
-  const picked: Scored[] = [];
-  const perCategory = new Map<string, number>();
-  for (const c of ranked) {
-    const n = perCategory.get(c.category) ?? 0;
-    if (n >= Math.ceil(max / 2)) continue;
-    picked.push(c);
-    perCategory.set(c.category, n + 1);
-    if (picked.length === max) break;
-  }
-  return orderAlong(picked, start, end);
-}
-
 export function orderAlong<T extends LatLng>(stops: T[], start: LatLng, end: LatLng | null): T[] {
   if (end) return [...stops].sort((a, b) => alongAxis(start, end, a) - alongAxis(start, end, b));
   const c = { lat: avg(stops.map((s) => s.lat), start.lat), lon: avg(stops.map((s) => s.lon), start.lon) };

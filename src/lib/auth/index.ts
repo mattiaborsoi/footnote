@@ -1,5 +1,6 @@
 import { and, desc, eq, gt, isNull, lt, sql } from "drizzle-orm";
 import { getDb } from "../db";
+import { appUrl } from "../env";
 import { loginCodes, users } from "../db/schema";
 import { newId } from "../ids";
 import { logEvent } from "../log";
@@ -29,11 +30,10 @@ export async function startSignIn(raw: string, next: string | null, ip: string):
   const code = newCode();
   const token = newToken();
   await db.insert(loginCodes).values({ emailKey: key, email, codeHash: hashSecret(code), linkHash: hashSecret(token), next: safeNext(next), expiresAt: new Date(Date.now() + CODE_TTL_MS) });
-  const base = (process.env.APP_URL ?? "http://localhost:3000").replace(/\/$/, "");
   await sendMail({
     to: email,
     subject: `Your Footnote code: ${formatCode(code)}`,
-    text: `Your sign-in code is ${formatCode(code)}. It works for 15 minutes.\n\nOr open this link on the device you are signing in from:\n${base}/signin/link?t=${token}\n\nIf you did not ask for this, ignore it: nothing happens without the code.`,
+    text: `Your sign-in code is ${formatCode(code)}. It works for 15 minutes.\n\nOr open this link on the device you are signing in from:\n${appUrl()}/signin/link?t=${token}\n\nIf you did not ask for this, ignore it: nothing happens without the code.`,
   });
   logEvent("auth.start", {});
   return { ok: true, masked: maskEmail(email) };

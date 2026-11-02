@@ -11,6 +11,7 @@ import AccountChip from "@/components/account/AccountChip";
 import { rememberWalk } from "@/lib/client/walks";
 import { readSse } from "@/lib/client/sse";
 import { sessionId, track } from "@/lib/client/events";
+import { btn } from "@/components/ui";
 
 const WalkMap = dynamic(() => import("@/components/map/WalkMap"), { ssr: false });
 type Req = ReturnType<typeof toRequest>;
@@ -104,7 +105,7 @@ export default function Planner({ initial, tailorOf }: { initial?: Partial<FormS
             <div className="flex flex-wrap gap-3">
               {limit.next === "signin" ? <Link href="/signin?next=/" className="flex min-h-12 items-center rounded-xl bg-text px-4 font-semibold text-paper">Sign in</Link> : null}
               {limit.next ? <Link href="/plans" className={`flex min-h-12 items-center rounded-xl px-4 font-semibold ${limit.next === "signin" ? "border-2 border-line" : "bg-text text-paper"}`}>See the passes</Link> : null}
-              <button type="button" className="flex min-h-12 items-center rounded-xl border-2 border-line px-4 font-semibold" onClick={() => setLimit(null)}>Back</button>
+              <button type="button" className={btn.secondary} onClick={() => setLimit(null)}>Back</button>
             </div>
           </section>
         ) : null}
