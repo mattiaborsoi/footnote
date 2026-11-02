@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {dedupe, orderAlong, score } from "@/lib/pipeline/candidates";
+import { dedupe, orderAlong, score } from "@/lib/pipeline/candidates";
 import type { Candidate } from "@/lib/providers/types";
 import { CITY } from "../fixtures/city";
 
