@@ -55,6 +55,7 @@ export default function WalkView({ initial, owned = false }: { initial: StoredWa
           <p className="text-[14px] text-muted">{whenLabel}</p>
           <h1 className="font-serif text-[34px] leading-[1.1] tracking-tight">{walk.title}</h1>
           <p className="text-[16px] leading-relaxed text-muted">{walk.summary}</p>
+          {walk.startNote ? <p className="text-[14px] leading-relaxed text-muted">{walk.startNote}</p> : null}
         </header>
 
         <div className="flex flex-wrap gap-2">
@@ -88,6 +89,7 @@ export default function WalkView({ initial, owned = false }: { initial: StoredWa
                     {s.arrival ? <span>arrive {s.arrival}</span> : null}
                     {s.hoursNote ? <span className={openWord === "closed" ? "flex items-center gap-1 font-semibold text-[#b3261e]" : openWord === "open" ? "font-semibold text-[#2e7d32]" : "italic"}>{openWord === "closed" ? <Icon.clock width={14} height={14} /> : null}{s.hoursNote}</span> : null}
                   </p>
+                  {s.legHint ? <p className="flex items-center gap-1.5 text-[13px] text-muted"><Icon.train width={14} height={14} className="flex-none" />{s.legHint}</p> : null}
                   <h2 className={`font-serif leading-tight ${isOpen ? "text-[26px]" : "text-[21px]"}`}>{s.name}</h2>
                   <p className={`leading-snug ${isOpen ? "text-[16px]" : "text-[15px] text-muted"}`}>{s.hook}</p>
                   {isOpen ? (

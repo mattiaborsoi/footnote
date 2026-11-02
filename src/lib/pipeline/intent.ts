@@ -33,8 +33,8 @@ export const SELECTORS: Record<Interest, string[]> = {
   history: [`["historic"]`, `["heritage"]`],
   modern: [`["building:architecture"~"^(modern|contemporary|brutalist|art_deco)$"]`, `["architect"]`],
   nature: [`["leisure"~"^(park|garden|nature_reserve)$"]`, `["natural"~"^(wood|water|beach)$"]`],
-  technology: [`["tourism"="museum"]["museum"~"technology|science"]`, `["amenity"="hackerspace"]`],
-  gaming: [`["shop"~"^(video_games|games)$"]`, `["leisure"~"^(amusement_arcade|escape_game)$"]`],
+  technology: [`["tourism"="museum"]["museum"~"technology|science|computer|industr|transport|railway|space"]`, `["amenity"~"^(hackerspace|research_institute)$"]`, `["man_made"~"^(observatory|telescope)$"]`, `["historic"="industrial"]`, `["shop"~"^(electronics|computer|camera|hifi|radiotechnics|telecommunication|electrical)$"]["brand"!~"."]`, `["amenity"="marketplace"]["name"~"electr|computer|camera|digital",i]`],
+  gaming: [`["shop"~"^(video_games|games|trading_cards|anime|model|collector)$"]`, `["leisure"~"^(amusement_arcade|escape_game|adult_gaming_centre)$"]`, `["amenity"="internet_cafe"]`, `["amenity"="cafe"]["board_game"]`, `["club"~"gaming|esport"]`],
   craft: [`["craft"]`, `["shop"~"^(craft|art|pottery)$"]`],
   film: [`["tourism"="attraction"]["description"~"film|movie|filming"]`, `["historic"]["wikipedia"]`],
 };
@@ -42,4 +42,7 @@ export const SELECTORS: Record<Interest, string[]> = {
 /** Walking speed in metres per second, used to size the search area and the time budget. */
 export const PACE_MPS = { relaxed: 1.1, normal: 1.35, brisk: 1.6 } as const;
 
+/** Minutes a walker typically spends at a stop, by category: a museum is a visit, a façade a glance. */
+export const DWELL_MINUTES: Record<string, number> = { museum: 30, cafe: 20, park: 15, games: 15, tech: 12, shop: 10, view: 8, art: 5, memorial: 5, architecture: 6, place: 8 };
 export const DWELL_MIN_PER_STOP = 6;
+export const dwellMinutes = (category: string | undefined) => DWELL_MINUTES[category ?? ""] ?? DWELL_MIN_PER_STOP;

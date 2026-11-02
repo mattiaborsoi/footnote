@@ -12,8 +12,15 @@ import { displayName } from "../names";
 export const INTEREST_CATEGORIES: Record<Interest, string[]> = {
   architecture: ["architecture", "memorial"], plaques: ["memorial"], cafes: ["cafe"], parks: ["park"], art: ["art", "museum"],
   views: ["view"], museums: ["museum"], shops: ["shop"], photo: ["view", "place", "architecture"], history: ["architecture", "memorial", "museum"],
-  modern: ["architecture"], nature: ["park"], technology: ["museum"], gaming: ["shop"], craft: ["shop", "art"], film: ["place", "architecture"],
+  modern: ["architecture"], nature: ["park"], technology: ["museum", "tech"], gaming: ["games"], craft: ["shop", "art"], film: ["place", "architecture"],
 };
+
+/** Where a category is broader than the interest (every museum answers "museums", only some answer "technology"), the tags decide. */
+export const INTEREST_FILTER: Partial<Record<Interest, (c: { category: string; tags: Record<string, string> }) => boolean>> = {
+  technology: (c) => c.category !== "museum" || /technology|science|computer|industr|transport|railway|space/i.test(c.tags.museum ?? ""),
+};
+
+export const matchesInterest = (interest: Interest, c: { category: string; tags: Record<string, string> }) => INTEREST_CATEGORIES[interest].includes(c.category) && (INTEREST_FILTER[interest]?.(c) ?? true);
 
 export const PLACES_FRESH_DAYS = 7;
 export const SCOUT_FRESH_DAYS = 30;
@@ -61,9 +68,8 @@ export async function cachedPlacesFor(bbox: BBox, start: LatLng, interests: Inte
   const core = clampBbox(city, city);
   const outside = [bbox.south < core.south - 0.002, bbox.north > core.north + 0.002, bbox.west < core.west - 0.002, bbox.east > core.east + 0.002].some(Boolean);
   if (outside && distanceM(start, city) > 4000) return null;
-  const wanted = new Set(interests.flatMap((i) => INTEREST_CATEGORIES[i]));
   const found = await db.select().from(places).where(and(eq(places.cityId, city.id), between(places.lat, bbox.south, bbox.north), between(places.lon, bbox.west, bbox.east)));
-  return found.filter((p) => wanted.has(p.category)).map((p) => {
+  return found.filter((p) => interests.some((i) => matchesInterest(i, { category: p.category, tags: p.tags as Record<string, string> }))).map((p) => {
     const tags = p.tags as Record<string, string>;
     const { name, localName } = displayName(tags, language);
     const facts = (p.facts as string[]).filter((f) => !f.startsWith("Local name: "));
@@ -81,6 +87,10 @@ export async function registerCity(cityName: string, geocoder: Geocoder): Promis
   if (existing) return id;
   const place = await geocoder.geocode(cityName).catch(() => null);
   if (!place?.bbox) return null;
+  // The same city under another name (local script from one geocoder, English from another): one row, not two caches.
+  const known = await db.select({ id: cities.id }).from(cities).where(sql`${cities.south} <= ${place.lat} and ${cities.north} >= ${place.lat} and ${cities.west} <= ${place.lon} and ${cities.east} >= ${place.lon}`);
+  const same = known.find((c) => c.id !== id);
+  if (same) return same.id;
   await db.insert(cities).values({ id, name: cityName, lat: place.lat, lon: place.lon, ...place.bbox, status: "pending" }).onConflictDoNothing();
   logEvent("city.registered", { city: id });
   return id;

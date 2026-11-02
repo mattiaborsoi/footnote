@@ -9,7 +9,7 @@ type Pace = "relaxed" | "normal" | "brisk";
 export function refreshStops(walk: Walk, when: string, pace: Pace = "normal"): Walk {
   const startAt = localAsUtc(when);
   const route: Route = { distanceM: walk.distanceM, durationS: 0, geometry: walk.route, legs: (walk.legs ?? []).map((l) => ({ distanceM: 0, durationS: l.durationS })) };
-  const arrivals = arrivalTimes(startAt, route, walk.stops.length, pace);
+  const arrivals = arrivalTimes(startAt, route, walk.stops, pace);
   return {
     ...walk,
     startsAt: startAt.toISOString().slice(0, 16),

@@ -7,9 +7,9 @@ import { logEvent } from "../log";
 import type { Geocoder } from "../providers/types";
 import type { SearchProvider } from "../providers/search";
 
-export const CATEGORIES = ["cafe", "shop", "museum", "art", "view", "park", "architecture", "memorial", "place"] as const;
+export const CATEGORIES = ["cafe", "shop", "museum", "art", "view", "park", "architecture", "memorial", "tech", "games", "place"] as const;
 
-/** What we search for in every city. Themes, not interests: one page often covers several. */
+/** What we search for in every city. Themes, not interests: one page often covers several. The scout pins names with the exact geocoder only; a typo-tolerant match could pin a name to the wrong place. */
 export const THEMES = [
   "hidden gems and unusual places to see in {city}",
   "best independent cafes and coffee shops in {city}",
@@ -20,6 +20,8 @@ export const THEMES = [
   "best small museums and galleries in {city}",
   "independent shops and markets in {city}",
   "parks, gardens and green walks in {city}",
+  "electronics markets, computer streets, maker spaces and technology museums in {city}",
+  "arcades, retro gaming, board game cafes and e-sports venues in {city}",
 ];
 
 const Extracted = z.object({

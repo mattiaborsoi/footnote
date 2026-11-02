@@ -20,6 +20,7 @@ export const Icon = {
   older: (p: SVGProps<SVGSVGElement>) => <svg {...base(p)}><circle cx="12" cy="6" r="3" /><path d="M8 22l2-9h4l2 9" /><path d="M10 13l-4 2" /></svg>,
   limited_mobility: (p: SVGProps<SVGSVGElement>) => <svg {...base(p)}><circle cx="10" cy="17" r="4" /><circle cx="13" cy="5" r="2" /><path d="M13 7v6h5l2 4" /></svg>,
   pram: (p: SVGProps<SVGSVGElement>) => <svg {...base(p)}><path d="M4 12h12a5 5 0 0 1 0 10H9" /><path d="M4 4v8" /><circle cx="8" cy="20" r="2" /><circle cx="18" cy="20" r="2" /></svg>,
+  train: (p: SVGProps<SVGSVGElement>) => <svg {...base(p)}><rect x="5" y="3" width="14" height="14" rx="3" /><path d="M5 11h14" /><path d="M9 7h6" /><circle cx="9" cy="14" r="1" /><circle cx="15" cy="14" r="1" /><path d="M8 17l-2 4M16 17l2 4" /></svg>,
   layers: (p: SVGProps<SVGSVGElement>) => <svg {...base(p)}><path d="M12 3l9 5-9 5-9-5z" /><path d="M3 13l9 5 9-5" /><path d="M3 17.5l9 5 9-5" /></svg>,
   locate: (p: SVGProps<SVGSVGElement>) => <svg {...base(p)}><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3" /><circle cx="12" cy="12" r="8" /></svg>,
   bug: (p: SVGProps<SVGSVGElement>) => <svg {...base(p)}><path d="M8 2l1.5 2.5M16 2l-1.5 2.5" /><rect x="7" y="6" width="10" height="14" rx="5" /><path d="M12 6v14M3 12h4M17 12h4M4 7l3 2M20 7l-3 2M4 18l3-2M20 18l-3-2" /></svg>,

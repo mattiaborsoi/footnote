@@ -7,8 +7,10 @@ export type Walk = {
   title: string;
   summary: string;
   start: LatLng & { label: string };
+  /** Why the walk starts where it does when the walker named a whole city rather than a spot. */
+  startNote?: string;
   end: (LatLng & { label: string }) | null;
-  stops: { id: string; name: string; category: string; lat: number; lon: number; facts: string[]; hook: string; story: string; why: string; arrival?: string; open?: "open" | "closed" | "unknown"; hoursNote?: string; legMinutes?: number; sources?: { title: string; url: string }[] }[];
+  stops: { id: string; name: string; category: string; lat: number; lon: number; facts: string[]; hook: string; story: string; why: string; arrival?: string; open?: "open" | "closed" | "unknown"; hoursNote?: string; legMinutes?: number; legHint?: string; sources?: { title: string; url: string }[] }[];
   totalMinutes: number;
   walkingMinutes: number;
   distanceM: number;
