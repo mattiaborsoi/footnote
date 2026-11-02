@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { PLACES_VERSION } from "@/lib/pipeline/intent";
+import { SCOUT_VERSION } from "@/lib/scout/index";
 import { clampBbox, contains, INTEREST_CATEGORIES, isFresh } from "@/lib/scout/places";
 import { pickDue } from "@/lib/scout/scheduler";
 import { refreshStops } from "@/lib/pipeline/refresh";
@@ -25,7 +27,7 @@ describe("places cache", () => {
 });
 
 describe("scheduler", () => {
-  const row = (id: string, placesAt: string | null, scoutedAt: string | null) => ({ id, name: id, lat: 0, lon: 0, south: 0, west: 0, north: 1, east: 1, placesAt: placesAt ? new Date(placesAt) : null, scoutedAt: scoutedAt ? new Date(scoutedAt) : null, sources: 0, status: "pending" });
+  const row = (id: string, placesAt: string | null, scoutedAt: string | null) => ({ id, name: id, lat: 0, lon: 0, south: 0, west: 0, north: 1, east: 1, placesAt: placesAt ? new Date(placesAt) : null, scoutedAt: scoutedAt ? new Date(scoutedAt) : null, sources: 0, status: "pending", placesVersion: PLACES_VERSION, scoutVersion: SCOUT_VERSION });
   it("picks the never-cached city first, then the stalest", () => {
     const now = new Date("2026-11-08T00:00:00Z");
     const due = pickDue([row("a", "2026-11-07", "2026-11-01"), row("b", null, null), row("c", "2026-10-01", "2026-09-01")], now);

@@ -1,4 +1,4 @@
-import { asc, isNull, lt, or, sql } from "drizzle-orm";
+import { asc, isNull, lt, ne, or, sql } from "drizzle-orm";
 import { getDb } from "../db";
 import { cities } from "../db/schema";
 import { logEvent } from "../log";
@@ -9,7 +9,8 @@ import { overpass } from "../providers/overpass";
 import { osrm } from "../providers/osrm";
 import { readPage } from "../providers/readpage";
 import { searxng } from "../providers/search";
-import { scoutCity } from "./index";
+import { scoutCity, SCOUT_VERSION } from "./index";
+import { PLACES_VERSION } from "../pipeline/intent";
 import { cachePlaces, PLACES_FRESH_DAYS, SCOUT_FRESH_DAYS } from "./places";
 import { buildPresets } from "./presets";
 
@@ -19,8 +20,8 @@ type CityRow = typeof cities.$inferSelect;
 export function pickDue(rows: CityRow[], now = new Date()): { places: CityRow | null; scout: CityRow | null } {
   const stale = (at: Date | null, days: number) => !at || now.getTime() - at.getTime() >= days * 86_400_000;
   const byOldest = (a: Date | null, b: Date | null) => (a?.getTime() ?? 0) - (b?.getTime() ?? 0);
-  const places = rows.filter((c) => stale(c.placesAt, PLACES_FRESH_DAYS)).sort((a, b) => byOldest(a.placesAt, b.placesAt))[0] ?? null;
-  const scout = rows.filter((c) => stale(c.scoutedAt, SCOUT_FRESH_DAYS)).sort((a, b) => byOldest(a.scoutedAt, b.scoutedAt))[0] ?? null;
+  const places = rows.filter((c) => stale(c.placesAt, PLACES_FRESH_DAYS) || c.placesVersion !== PLACES_VERSION).sort((a, b) => byOldest(a.placesAt, b.placesAt))[0] ?? null;
+  const scout = rows.filter((c) => stale(c.scoutedAt, SCOUT_FRESH_DAYS) || c.scoutVersion !== SCOUT_VERSION).sort((a, b) => byOldest(a.scoutedAt, b.scoutedAt))[0] ?? null;
   return { places, scout };
 }
 
@@ -36,7 +37,7 @@ export function tick(): Promise<void> {
 async function runTick(): Promise<void> {
   const db = getDb();
   if (!db) return;
-  const due = pickDue(await db.select().from(cities).where(or(isNull(cities.placesAt), isNull(cities.scoutedAt), lt(cities.placesAt, sql`now() - interval '${sql.raw(String(PLACES_FRESH_DAYS))} days'`), lt(cities.scoutedAt, sql`now() - interval '${sql.raw(String(SCOUT_FRESH_DAYS))} days'`))).orderBy(asc(cities.placesAt)));
+  const due = pickDue(await db.select().from(cities).where(or(isNull(cities.placesAt), isNull(cities.scoutedAt), lt(cities.placesAt, sql`now() - interval '${sql.raw(String(PLACES_FRESH_DAYS))} days'`), lt(cities.scoutedAt, sql`now() - interval '${sql.raw(String(SCOUT_FRESH_DAYS))} days'`), ne(cities.placesVersion, PLACES_VERSION), ne(cities.scoutVersion, SCOUT_VERSION))).orderBy(asc(cities.placesAt)));
   const cfg = configFromEnv();
   const llm = { transport: httpTransport(cfg), models: cfg.models };
   if (due.places) {

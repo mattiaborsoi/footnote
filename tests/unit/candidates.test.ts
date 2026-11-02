@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { categoryOf } from "@/lib/providers/overpass";
 import { matchesInterest } from "@/lib/scout/places";
-import { dedupe, orderAlong, score } from "@/lib/pipeline/candidates";
+import { dedupe, orderAlong, rank, score } from "@/lib/pipeline/candidates";
 import type { Candidate } from "@/lib/providers/types";
 import { CITY } from "../fixtures/city";
 
@@ -52,5 +52,21 @@ describe("categoryOf", () => {
     expect(matchesInterest("technology", { category: "museum", tags: { museum: "art" } })).toBe(false);
     expect(matchesInterest("technology", { category: "tech", tags: {} })).toBe(true);
     expect(matchesInterest("museums", { category: "museum", tags: { museum: "art" } })).toBe(true);
+  });
+});
+
+describe("rank with anchors", () => {
+  const rich = (i: number) => cand(`r${i}`, `Sight ${i}`, CITY.circus, ["Listed: Grade I", "Built: 1800", "Architect: X"], "architecture", { wikipedia: "en:x" });
+  const shop = (i: number) => cand(`g${i}`, `Game shop ${i}`, CITY.parade, ["Opening hours: Mo-Su 10:00-18:00"], "games");
+  const pool = [...Array.from({ length: 12 }, (_, i) => rich(i)), ...Array.from({ length: 4 }, (_, i) => shop(i))];
+  it("keeps a third of the pool for places that answer the interest", () => {
+    const kept = rank(pool, CITY.abbey, null, 2000, 9, (c) => c.category === "games");
+    expect(kept).toHaveLength(9);
+    expect(kept.filter((c) => c.category === "games")).toHaveLength(3);
+    expect(kept.filter((c) => c.category === "architecture")).toHaveLength(6);
+  });
+  it("changes nothing when the anchors already made the cut, or without an anchor rule", () => {
+    expect(rank(pool, CITY.abbey, null, 2000, 50, (c) => c.category === "games")).toHaveLength(16);
+    expect(rank(pool, CITY.abbey, null, 2000, 9).filter((c) => c.category === "games")).toHaveLength(0);
   });
 });
