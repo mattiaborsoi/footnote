@@ -16,7 +16,7 @@ export default function PlansPage() {
       <Logo />
       <header className="flex flex-col gap-2">
         <h1 className="font-serif text-[34px] leading-[1.1] tracking-tight">A pass for the walks ahead</h1>
-        <p className="text-[16px] text-muted">The first {trial === 1 ? "walk is" : `${trial} walks are`} free. Each pass covers up to a set number of walks: every walk costs real computing, so we say the number rather than promise &ldquo;unlimited&rdquo;.</p>
+        <p className="text-[16px] text-muted">The first {trial === 1 ? "walk is" : `${trial} walks are`} free: one to try at home, one for the trip. Every walk costs real computing, so each pass says what it holds rather than promise &ldquo;unlimited&rdquo;.</p>
       </header>
       <section className="flex flex-col gap-2 rounded-2xl bg-soft p-5 text-[15px]">
         <h2 className="font-serif text-[20px]">Why a walk costs money</h2>
@@ -27,7 +27,7 @@ export default function PlansPage() {
           <section key={p.id} className="flex flex-col gap-3 rounded-2xl border-2 border-line p-5">
             <h2 className="font-serif text-[24px]">{p.name}</h2>
             <p className="flex flex-col"><span className="text-[28px] font-semibold">{p.price}</span><span className="text-[14px] text-muted">{p.period}</span></p>
-            <p className="text-[15px]">Up to <strong>{p.walks} walks</strong>. Tailoring a walk counts as one; re-checking hours and weather, around me and reopening a walk are free.</p>
+            <p className="text-[15px]"><strong>{p.allowance}</strong> A walk over two hours counts as two; tailoring a walk counts as one. Re-checking hours and weather, swapping a stop, around me and reopening a walk are free.</p>
             <p className="text-[15px] text-muted">{p.blurb}</p>
             <div className="mt-auto"><PlanButton plan={p.id} label={`Get the ${p.name.toLowerCase()}`} ready={ready} /></div>
           </section>

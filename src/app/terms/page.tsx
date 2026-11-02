@@ -14,7 +14,7 @@ export default function TermsPage() {
       <h2 className="font-serif text-[22px]">The service</h2>
       <p>Footnote builds walks from open map data and published recommendations. Stops, opening hours and timings are checked but can be wrong or out of date: look before you cross, and treat an opening time as a plan, not a promise.</p>
       <h2 className="font-serif text-[22px]">Trial and passes</h2>
-      <p>The first walk is free. A week pass lasts seven days from payment and does not renew. The monthly plan renews each month until you cancel from your account; cancelling keeps the rest of the paid month. Each pass covers the stated number of walks; a walk that is served from our cache is not counted. Prices include VAT and are shown before you pay.</p>
+      <p>The first two walks are free. A week pass lasts seven days from payment and does not renew, and holds as many walks as a week holds at fair use, ten a day. The monthly plan renews each month until you cancel from your account, covers the stated number of walks a month, and cancelling keeps the rest of the paid month. A walk over two hours counts as two; a walk served from our cache is not counted. Prices include VAT and are shown before you pay.</p>
       <h2 className="font-serif text-[22px]">Cancelling a purchase</h2>
       <p>Walks are digital content supplied straight away. By buying a pass you ask us to start at once and accept that the 14-day right to cancel ends when the first walk of the pass is built. If something is broken on our side, write to us through the feedback button and we will put it right or refund.</p>
       <h2 className="font-serif text-[22px]">Fair use</h2>

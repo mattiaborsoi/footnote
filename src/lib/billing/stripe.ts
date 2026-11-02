@@ -4,16 +4,16 @@ import type { User } from "../auth";
 import { getDb } from "../db";
 import { stripeEvents, users } from "../db/schema";
 import { logEvent } from "../log";
-import { planWalks } from "../account/allowance";
+import { dailyFairUse, planWalks } from "../account/allowance";
 
 export type PlanId = "week" | "month";
-export type PlanInfo = { id: PlanId; name: string; price: string; walks: number; period: string; mode: "payment" | "subscription"; blurb: string; priceId: string | undefined };
+export type PlanInfo = { id: PlanId; name: string; price: string; walks: number; allowance: string; period: string; mode: "payment" | "subscription"; blurb: string; priceId: string | undefined };
 
 /** The two offers. Prices are labels here; Stripe holds the real ones behind the price ids. */
 export function plans(): PlanInfo[] {
   return [
-    { id: "week", name: "Week pass", price: process.env.PLAN_WEEK_PRICE ?? "£4.99", walks: planWalks("week"), period: "seven days, no renewal", mode: "payment", blurb: "For a trip. Starts the moment you pay and ends after seven days; nothing renews.", priceId: process.env.STRIPE_PRICE_WEEK },
-    { id: "month", name: "Monthly", price: process.env.PLAN_MONTH_PRICE ?? "£7.99", walks: planWalks("month"), period: "a month, renews until you cancel", mode: "subscription", blurb: "For locals and planners. Renews every month; cancel any time from your account and keep the rest of the month.", priceId: process.env.STRIPE_PRICE_MONTH },
+    { id: "week", name: "Week pass", price: process.env.PLAN_WEEK_PRICE ?? "£4.99", walks: planWalks("week"), allowance: `As many walks as a week holds. Fair use is ${dailyFairUse()} a day.`, period: "seven days, no renewal", mode: "payment", blurb: "For a trip. Starts the moment you pay and ends after seven days; nothing renews.", priceId: process.env.STRIPE_PRICE_WEEK },
+    { id: "month", name: "Monthly", price: process.env.PLAN_MONTH_PRICE ?? "£7.99", walks: planWalks("month"), allowance: `Up to ${planWalks("month")} walks a month.`, period: "a month, renews until you cancel", mode: "subscription", blurb: "For locals and planners. Renews every month; cancel any time from your account and keep the rest of the month.", priceId: process.env.STRIPE_PRICE_MONTH },
   ];
 }
 
