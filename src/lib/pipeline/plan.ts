@@ -64,7 +64,13 @@ export async function planWalk(raw: unknown, p: Providers, llm: Llm, emit: (e: S
   const endAt = new Date(startAt.getTime() + intent.minutes * 60_000);
   const cachedPlaces = await cachedPlacesFor(bbox, start, intent.interests, intent.language).catch(() => null);
   const [mapped, scouted, weather] = await Promise.all([
-    cachedPlaces ?? p.places.search(bbox, selectors, intent.language),
+    cachedPlaces ?? p.places.search(bbox, selectors, intent.language).catch(async (err: unknown) => {
+      // The live map server is down: an older cache of this city beats no walk at all.
+      const stale = await cachedPlacesFor(bbox, start, intent.interests, intent.language, { stale: true }).catch(() => null);
+      if (!stale) throw err;
+      logEvent("places.stale", { error: String(err).slice(0, 80) });
+      return stale;
+    }),
     loadSpotsInBbox(bbox).catch(() => []),
     weatherFor(start, startAt, endAt).catch(() => null),
   ]);

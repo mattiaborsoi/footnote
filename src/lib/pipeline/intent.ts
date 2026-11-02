@@ -19,6 +19,9 @@ export const Intent = z.object({
 });
 export type Intent = z.infer<typeof Intent>;
 
+/** Bump when SELECTORS or categoryOf change: a city cached with an older set is refreshed, and walks there go live meanwhile. */
+export const PLACES_VERSION = 2;
+
 /** Overpass selectors per interest. Each selector is appended to `nwr` and filtered to named features. */
 export const SELECTORS: Record<Interest, string[]> = {
   architecture: [`["historic"]`, `["heritage"]`, `["building:architecture"]`],

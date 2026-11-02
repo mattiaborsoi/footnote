@@ -10,6 +10,9 @@ import type { SearchProvider } from "../providers/search";
 export const CATEGORIES = ["cafe", "shop", "museum", "art", "view", "park", "architecture", "memorial", "tech", "games", "place"] as const;
 
 /** What we search for in every city. Themes, not interests: one page often covers several. The scout pins names with the exact geocoder only; a typo-tolerant match could pin a name to the wrong place. */
+/** Bump when THEMES or CATEGORIES change: a city scouted with an older set is scouted again. */
+export const SCOUT_VERSION = 2;
+
 export const THEMES = [
   "hidden gems and unusual places to see in {city}",
   "best independent cafes and coffee shops in {city}",
@@ -101,8 +104,8 @@ export async function scoutCity(cityName: string, d: ScoutDeps, opts: { pagesPer
   }
 
   await db.transaction(async (tx) => {
-    await tx.insert(cities).values({ id, name: place.label.split(",")[0], lat: place.lat, lon: place.lon, ...bbox, scoutedAt: new Date(), sources: seen.size })
-      .onConflictDoUpdate({ target: cities.id, set: { scoutedAt: new Date(), sources: seen.size } });
+    await tx.insert(cities).values({ id, name: place.label.split(",")[0], lat: place.lat, lon: place.lon, ...bbox, scoutedAt: new Date(), scoutVersion: SCOUT_VERSION, sources: seen.size })
+      .onConflictDoUpdate({ target: cities.id, set: { scoutedAt: new Date(), scoutVersion: SCOUT_VERSION, sources: seen.size } });
     await tx.delete(spots).where(eq(spots.cityId, id));
     if (rows.length) await tx.insert(spots).values(rows);
   });

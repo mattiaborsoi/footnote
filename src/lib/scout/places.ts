@@ -2,7 +2,7 @@ import { and, between, eq, isNotNull, sql } from "drizzle-orm";
 import { getDb } from "../db";
 import { cities, places } from "../db/schema";
 import { distanceM, type LatLng } from "../geo";
-import { Interest, SELECTORS } from "../pipeline/intent";
+import { Interest, PLACES_VERSION, SELECTORS } from "../pipeline/intent";
 import { logEvent } from "../log";
 import type { BBox, Candidate, Geocoder, PlacesProvider } from "../providers/types";
 import { normaliseName } from "./index";
@@ -58,18 +58,20 @@ export async function cachePlaces(city: { id: string; lat: number; lon: number; 
   await db.transaction(async (tx) => {
     await tx.delete(places).where(eq(places.cityId, city.id));
     for (let i = 0; i < rows.length; i += 500) await tx.insert(places).values(rows.slice(i, i + 500));
-    await tx.update(cities).set({ placesAt: new Date(), status: "ready" }).where(eq(cities.id, city.id));
+    await tx.update(cities).set({ placesAt: new Date(), placesVersion: PLACES_VERSION, status: "ready" }).where(eq(cities.id, city.id));
   });
   logEvent("cache.places", { city: city.id, places: rows.length });
   return rows.length;
 }
 
-/** Cached candidates for a walk, or null when no fresh city covers the start: the caller then goes live and registers the city. */
-export async function cachedPlacesFor(bbox: BBox, start: LatLng, interests: Interest[], language = "en"): Promise<Candidate[] | null> {
+/** Cached candidates for a walk, or null when no fresh city covers the start: the caller then goes live and registers the city. With `stale`, any cache covering the start will do: the fallback when the live search fails. */
+export async function cachedPlacesFor(bbox: BBox, start: LatLng, interests: Interest[], language = "en", opts: { stale?: boolean } = {}): Promise<Candidate[] | null> {
   const db = getDb();
   if (!db) return null;
   const rows = await db.select().from(cities).where(and(isNotNull(cities.placesAt), sql`${cities.south} <= ${start.lat} and ${cities.north} >= ${start.lat} and ${cities.west} <= ${start.lon} and ${cities.east} >= ${start.lon}`));
-  const city = rows.find((c) => isFresh(c.placesAt, PLACES_FRESH_DAYS) && contains(clampBbox(c, c), start));
+  // A cache filled with an older selector set has no row for the newer categories, so it does not count as covering the start.
+  const usable = (c: (typeof rows)[number]) => opts.stale || (isFresh(c.placesAt, PLACES_FRESH_DAYS) && c.placesVersion === PLACES_VERSION);
+  const city = rows.find((c) => usable(c) && contains(clampBbox(c, c), start));
   if (!city) return null;
   const core = clampBbox(city, city);
   const outside = [bbox.south < core.south - 0.002, bbox.north > core.north + 0.002, bbox.west < core.west - 0.002, bbox.east > core.east + 0.002].some(Boolean);
