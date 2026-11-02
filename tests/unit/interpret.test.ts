@@ -6,7 +6,6 @@ describe("interpret", () => {
     const intent = await interpret({ start: "Abbey", end: { kind: "transport" }, minutes: 60, companions: ["me", "kids"], interests: ["nature", "cafes"], when: "now", language: "it" }, null, "m");
     expect(intent.pace).toBe("relaxed");
     expect(intent.end).toBeNull();
-    expect(intent.endMode).toBe("transport");
     expect(intent.language).toBe("it");
     expect(intent.interests).toEqual(["nature", "cafes"]);
   });

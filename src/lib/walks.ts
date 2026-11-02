@@ -6,6 +6,8 @@ import type { Walk } from "./pipeline/walk";
 
 export type StoredWalk = Walk & { id: string; createdAt: string; ownerId?: string | null };
 
+const toStored = (row: { id: string; createdAt: Date; walk: unknown; userId: string | null }): StoredWalk => ({ ...(row.walk as Walk), id: row.id, createdAt: row.createdAt.toISOString(), ownerId: row.userId });
+
 export async function saveWalk(walk: Walk, request: unknown, sessionId: string | null, meta: { cityId?: string; preset?: string; fingerprint?: string; userId?: string } = {}): Promise<string | null> {
   const db = getDb();
   if (!db) return null;
@@ -18,7 +20,7 @@ export async function loadWalk(id: string): Promise<StoredWalk | null> {
   const db = getDb();
   if (!db) return null;
   const row = await db.query.walks.findFirst({ where: eq(walks.id, id) });
-  return row ? { ...(row.walk as Walk), id: row.id, createdAt: row.createdAt.toISOString(), ownerId: row.userId } : null;
+  return row ? toStored(row) : null;
 }
 
 /** A walk built for the same request recently, if any. */
@@ -26,7 +28,7 @@ export async function findRecent(fingerprint: string, maxAgeHours = 24): Promise
   const db = getDb();
   if (!db) return null;
   const row = await db.query.walks.findFirst({ where: and(eq(walks.fingerprint, fingerprint), gt(walks.createdAt, new Date(Date.now() - maxAgeHours * 3_600_000))), orderBy: desc(walks.createdAt) });
-  return row ? { ...(row.walk as Walk), id: row.id, createdAt: row.createdAt.toISOString() } : null;
+  return row ? toStored(row) : null;
 }
 
 /** The walks a person kept, newest first. */

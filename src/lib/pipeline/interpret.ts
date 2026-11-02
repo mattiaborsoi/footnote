@@ -35,7 +35,6 @@ export async function interpret(raw: unknown, transport: Transport | null, model
   const base = {
     start: form.start,
     end: form.end.kind === "place" ? form.end.place ?? null : form.end.kind === "same" ? form.start : null,
-    endMode: form.end.kind,
     minutes: form.minutes,
     pace: form.pace ?? paceFor(form.companions),
     interests: [...form.interests],

@@ -1,3 +1,4 @@
+import { CITY_ID_PATTERN } from "@/lib/ids";
 import type { Metadata } from "next";
 import Link from "next/link";
 import Logo from "@/components/Logo";
@@ -18,7 +19,7 @@ export default function CityPage({ params }: { params: Promise<{ id: string }> }
 async function CityContent({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const db = getDb();
-  if (!db || !/^[a-z0-9-]{2,60}$/.test(id)) notFound();
+  if (!db || !CITY_ID_PATTERN.test(id)) notFound();
   const city = await db.query.cities.findFirst({ where: eq(cities.id, id) });
   if (!city) notFound();
   const presets = await listPresets(id);

@@ -8,3 +8,7 @@ export function newId(length = 10): string {
 }
 
 export const ID_PATTERN = /^[a-z0-9]{6,16}$/;
+/** The browser-made session id in beacons and claims. */
+export const SESSION_PATTERN = /^[A-Za-z0-9_-]{8,64}$/;
+/** A city id as the scout layer names it. */
+export const CITY_ID_PATTERN = /^[a-z0-9-]{2,60}$/;

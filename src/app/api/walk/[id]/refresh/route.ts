@@ -11,6 +11,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!ID_PATTERN.test(id)) return Response.json({ error: "not found" }, { status: 404 });
   const walk = await loadWalk(id);
   if (!walk) return Response.json({ error: "not found" }, { status: 404 });
-  const body = ((await req.json().catch(() => ({}))) ?? {}) as { when?: string; pace?: "relaxed" | "normal" | "brisk" };
-  return Response.json(await refreshWalk(walk, typeof body.when === "string" ? body.when : "now", body.pace ?? "normal"));
+  const body = ((await req.json().catch(() => ({}))) ?? {}) as { when?: string };
+  return Response.json(await refreshWalk(walk, typeof body.when === "string" ? body.when : "now"));
 }

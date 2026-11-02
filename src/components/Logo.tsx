@@ -12,9 +12,9 @@ export function Mark({ size = 28 }: { size?: number }) {
   );
 }
 
-export default function Logo({ href = "/", size = 28 }: { href?: string; size?: number }) {
+export default function Logo({ size = 28 }: { size?: number }) {
   return (
-    <Link href={href} className="flex items-center gap-2 font-serif text-2xl font-semibold tracking-tight" aria-label="Footnote, home">
+    <Link href="/" className="flex items-center gap-2 font-serif text-2xl font-semibold tracking-tight" aria-label="Footnote, home">
       <Mark size={size} />
       <span>Footnote<sup className="ml-0.5 text-[0.55em] font-medium text-ink">1</sup></span>
     </Link>

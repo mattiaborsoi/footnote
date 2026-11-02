@@ -11,7 +11,10 @@ json=$(printf '{"message": %s, "since": "%s"}' "$(printf %s "$msg" | python3 -c 
 if [ -n "${PROD_SSH:-}" ]; then
   if [ "$mode" = on ]; then printf '%s' "$json" | ssh "$PROD_SSH" "mkdir -p '$dir/data/app' && cat > '$dir/data/app/maintenance.json'"; else ssh "$PROD_SSH" "rm -f '$dir/data/app/maintenance.json'"; fi
 else
-  cd "$(dirname "$0")/.."; mkdir -p data
-  if [ "$mode" = on ]; then printf '%s' "$json" > data/maintenance.json; else rm -f data/maintenance.json; fi
+  cd "$(dirname "$0")/.."
+  # the production stack mounts ./data/app as the app's data folder; the dev stack mounts the whole tree
+  if [ -f compose.prod.yml ] && [ -d data/app ]; then f=data/app/maintenance.json; else f=data/maintenance.json; fi
+  mkdir -p "$(dirname "$f")"
+  if [ "$mode" = on ]; then printf '%s' "$json" > "$f"; else rm -f "$f"; fi
 fi
 echo "maintenance $mode"

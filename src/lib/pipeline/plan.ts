@@ -7,7 +7,7 @@ import { fitToBudget, stepsFor } from "./fit";
 import { googleMapsUrl, gpx } from "./export";
 import { PACE_MPS, SELECTORS } from "./intent";
 import { interpret } from "./interpret";
-import { arrivalTimes, localAsUtc, openAt, openState, TIMED_CATEGORIES } from "./hours";
+import { arrivalTimes, isLateHour, localAsUtc, openAt, openState, TIMED_CATEGORIES } from "./hours";
 import { weatherFor } from "../providers/openmeteo";
 import { loadSpotsInBbox, mergeScouted } from "../scout/spots";
 import { cachedPlacesFor, registerCity } from "../scout/places";
@@ -54,7 +54,7 @@ export async function planWalk(raw: unknown, p: Providers, llm: Llm, emit: (e: S
   const found = mergeScouted(mapped, scouted);
   // Hours: a timed place closed for the whole window is out; what stays carries its hours as a fact the model can cite.
   const startHour = startAt.getUTCHours();
-  const lateStart = startHour >= 18 || startHour < 8;
+  const lateStart = isLateHour(startHour);
   const withHours = found.flatMap((c) => {
     const h = openState(c.tags.opening_hours, startAt, endAt);
     if (h.state === "closed" && TIMED_CATEGORIES.has(c.category)) return [];
@@ -88,7 +88,7 @@ export async function planWalk(raw: unknown, p: Providers, llm: Llm, emit: (e: S
   const stops = fitted.stops.map((s, i) => {
     const h = openAt(s.tags.opening_hours, arrivals[i]);
     const hour = arrivals[i].getUTCHours();
-    const late = hour >= 18 || hour < 8;
+    const late = isLateHour(hour);
     const note = h.state === "unknown" ? (TIMED_CATEGORIES.has(s.category) && late ? "hours unknown, may be closed at this time" : TIMED_CATEGORIES.has(s.category) ? "hours unknown" : "") : h.note;
     const legMinutes = Math.max(1, Math.round(((fitted.route.legs[i]?.durationS ?? 0) * (PACE_MPS.normal / PACE_MPS[intent.pace])) / 60));
     return { id: s.id, name: s.name, category: s.category, lat: s.lat, lon: s.lon, facts: s.facts, hook: s.hook, story: s.story, why: s.why, arrival: arrivals[i].toISOString().slice(11, 16), open: h.state, hoursNote: note, legMinutes, sources: s.sources ?? [] };

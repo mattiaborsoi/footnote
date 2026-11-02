@@ -1,4 +1,4 @@
-/** Runs once when the server starts: apply migrations, then prune on a daily timer. */
+/** Runs once when the server starts: refuse example secrets in production, apply migrations, prune on a daily timer, start the scout scheduler. */
 export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
   if (process.env.NODE_ENV === "production") {

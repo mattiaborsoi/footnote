@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { arrivalTimes, localAsUtc, openAt, openState } from "@/lib/pipeline/hours";
+import { readsAsSentence } from "@/lib/pipeline/plan";
 import type { Route } from "@/lib/providers/types";
 
 const sat14 = (hhmm: string) => new Date(`2026-03-14T${hhmm}:00Z`);
@@ -38,7 +39,6 @@ it("arrivalTimes adds legs and dwell, scaled for pace", () => {
   expect(slow[0].getTime()).toBeGreaterThan(a[0].getTime());
 });
 
-import { readsAsSentence } from "@/lib/pipeline/plan";
 it("readsAsSentence keeps prose and drops tag values", () => {
   expect(readsAsSentence('Recommended on "A blog": the roaster that put this city on the coffee map')).toBe(true);
   expect(readsAsSentence("Description: a riverside garden laid out as a private pleasure ground")).toBe(true);

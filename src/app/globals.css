@@ -97,5 +97,4 @@ dialog[open]::backdrop { animation: fn-fade-in 180ms ease-out; }
   body { background: #fff !important; color: #141413 !important; }
   .maplibregl-ctrl, .print\:hidden, nextjs-portal { display: none !important; }
   main { padding: 0 !important; max-width: none !important; }
-  .break-inside-avoid { break-inside: avoid; }
 }

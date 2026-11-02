@@ -69,4 +69,7 @@ export function arrivalTimes(startAt: Date, route: Route, stopCount: number, pac
   return out;
 }
 
+/** Evening or early morning: when a timed place with unknown hours is probably shut. */
+export const isLateHour = (hour: number) => hour >= 18 || hour < 8;
+
 export const TIMED_CATEGORIES = new Set(["cafe", "shop", "museum", "art"]);
