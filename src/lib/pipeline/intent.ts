@@ -12,7 +12,6 @@ export const Intent = z.object({
   avoid: z.array(z.string()).default([]),
   mustInclude: z.array(z.string()).default([]),
   vibe: z.string().default(""),
-  endMode: z.enum(["same", "place", "transport", "anywhere"]).default("anywhere"),
   companions: z.array(z.enum(["me", "kids", "older", "limited_mobility", "pram"])).default(["me"]),
   when: z.string().default("now"),
   language: z.string().default("en"),

@@ -15,7 +15,7 @@ export function proxy(req: NextRequest) {
     if (!signedIn) return NextResponse.redirect(new URL("/admin/login", req.url));
     return NextResponse.next();
   }
-  if (pathname === "/api/health" || pathname.startsWith("/admin") || pathname.startsWith("/api/admin") || pathname.startsWith("/api/billing/webhook")) return NextResponse.next();
+  if (pathname === "/api/health" || pathname.startsWith("/api/admin") || pathname.startsWith("/api/billing/webhook")) return NextResponse.next();
   const m = maintenance();
   if (!m.on) return NextResponse.next();
   if (pathname.startsWith("/api/")) return NextResponse.json({ error: "maintenance", message: m.message }, { status: 503, headers: { "Retry-After": "600" } });

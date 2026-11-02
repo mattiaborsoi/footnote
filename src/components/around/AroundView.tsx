@@ -6,6 +6,7 @@ import Feedback from "@/components/Feedback";
 import { Icon } from "@/components/icons";
 import { sessionId, track } from "@/lib/client/events";
 import type { Option } from "@/lib/pipeline/around";
+import { btn } from "@/components/ui";
 
 const WalkMap = dynamic(() => import("@/components/map/WalkMap"), { ssr: false });
 
@@ -55,7 +56,7 @@ export default function AroundView() {
             <p className="text-[15px] text-muted">Around me needs your location to find what is near you.</p>
             <div className="flex flex-wrap gap-2">
               <button type="button" onClick={locate} className="flex min-h-12 items-center gap-2 rounded-xl bg-text px-4 font-semibold text-paper"><Icon.locate width={18} height={18} />Use my location</button>
-              <Link href="/" className="flex min-h-12 items-center rounded-xl border-2 border-line px-4 font-semibold">Or plan a walk from a place</Link>
+              <Link href="/" className={btn.secondary}>Or plan a walk from a place</Link>
             </div>
           </div>
         ) : null}

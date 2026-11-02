@@ -3,6 +3,7 @@ import Stripe from "stripe";
 import type { User } from "../auth";
 import { getDb } from "../db";
 import { stripeEvents, users } from "../db/schema";
+import { appUrl } from "../env";
 import { logEvent } from "../log";
 import { dailyFairUse, planWalks } from "../account/allowance";
 
@@ -28,7 +29,6 @@ export function paymentsReady(): boolean {
   return !!stripe() && plans().every((p) => !!p.priceId);
 }
 
-const appUrl = () => (process.env.APP_URL ?? "http://localhost:3000").replace(/\/$/, "");
 
 /** A Checkout page for one plan; the customer is created on first purchase and remembered. */
 export async function checkoutUrl(user: User, planId: PlanId): Promise<string> {

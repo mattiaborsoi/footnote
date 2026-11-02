@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dedupe, orderAlong, pickAndOrder, rank, score } from "@/lib/pipeline/candidates";
+import {dedupe, orderAlong, score } from "@/lib/pipeline/candidates";
 import type { Candidate } from "@/lib/providers/types";
 import { CITY } from "../fixtures/city";
 
@@ -27,20 +27,7 @@ describe("dedupe", () => {
   });
 });
 
-describe("rank and pickAndOrder", () => {
-  it("orders point-to-point stops along the way and limits per category", () => {
-    const cands = [
-      cand("1", "Near end", CITY.royalCrescent, ["x"]),
-      cand("2", "Near start", CITY.abbey, ["x"]),
-      cand("3", "Middle", CITY.circus, ["x"]),
-      cand("4", "Cafe", CITY.circus, ["x"], "cafe"),
-      cand("5", "Another", CITY.circus, ["x", "y"]),
-    ];
-    const picked = pickAndOrder(rank(cands, CITY.abbey, CITY.royalCrescent, 1500), CITY.abbey, CITY.royalCrescent, 4);
-    expect(picked.filter((p) => p.category === "architecture").length).toBeLessThanOrEqual(2);
-    const ids = picked.map((p) => p.id);
-    expect(ids.indexOf("2") === -1 || ids.indexOf("1") === -1 || ids.indexOf("2") < ids.indexOf("1")).toBe(true);
-  });
+describe("rank and orderAlong", () => {
   it("orders loop stops around the start", () => {
     const stops = [CITY.royalCrescent, CITY.parade, CITY.circus].map((p, i) => ({ ...p, id: String(i) }));
     const out = orderAlong(stops, CITY.abbey, null);

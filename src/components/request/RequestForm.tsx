@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Icon, type IconName } from "@/components/icons";
 import { track, whenString } from "@/lib/client/events";
+import { alert } from "@/components/ui";
 
 export type FormState = {
   start: string;
@@ -129,7 +130,7 @@ export default function RequestForm({ onSubmit, busy, initial, startFrom }: { on
             <label className="flex-1"><span className="sr-only">Start</span><input id="start" name="start" enterKeyHint="next" className={input} placeholder="Start: a place, an address, or use your location…" value={f.start} onChange={(e) => set("start", e.target.value)} autoComplete="off" required /></label>
             <button type="button" onClick={locate} className="flex min-h-12 min-w-12 items-center justify-center rounded-xl border-[1.5px] border-line text-ink" aria-label="Use my location" disabled={locating}><Icon.locate /></button>
           </div>
-          {locateNote ? <p role="alert" className="rounded-xl bg-soft px-4 py-3 text-[14px] font-medium text-amber">{locateNote}</p> : null}
+          {locateNote ? <p role="alert" className={alert}>{locateNote}</p> : null}
           <div className="flex flex-wrap gap-2" role="group" aria-label="End">
             {([["anywhere", "Anywhere, surprise me"], ["same", "Back to the start"], ["transport", "Near a station or stop"], ["place", "A place"]] as const).map(([k, l]) => (
               <button type="button" key={k} className={chip(f.endKind === k)} aria-pressed={f.endKind === k} onClick={() => set("endKind", k)}>{l}</button>
@@ -193,7 +194,7 @@ export default function RequestForm({ onSubmit, busy, initial, startFrom }: { on
         </section>
       ) : null}
 
-      {nudge ? <p role="alert" className="rounded-xl bg-soft px-4 py-3 text-[14px] font-medium text-amber">{nudge}</p> : null}
+      {nudge ? <p role="alert" className={alert}>{nudge}</p> : null}
       <div className="mt-auto flex gap-3">
         {phone && step > 0 ? <button type="button" className="min-h-[52px] flex-1 rounded-2xl border-2 border-line font-semibold hover:bg-soft" onClick={() => { setNudge(null); setDir("back"); setStep(step - 1); }}>Back</button> : null}
         <button type="submit" className="min-h-[52px] flex-[2] rounded-2xl bg-text font-semibold text-paper disabled:opacity-40" disabled={busy}>

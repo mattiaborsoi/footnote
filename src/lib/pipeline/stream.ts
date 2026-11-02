@@ -11,7 +11,6 @@ import { findRecent, saveWalk } from "../walks";
 import { fingerprint } from "./fingerprint";
 import { planWalk } from "./plan";
 
-/** Build a walk and stream it as server-sent events: `stage` while it builds, then `walk`, or `error`. */
 const STORED_KEYS = ["start", "end", "minutes", "companions", "pace", "interests", "when", "notes", "language"] as const;
 /** What a walk remembers of its request: the known fields only, so a stranger's extra keys never reach the database or a later tailor. */
 export function storedRequest(body: Record<string, unknown>): Record<string, unknown> {
@@ -20,7 +19,8 @@ export function storedRequest(body: Record<string, unknown>): Record<string, unk
   return out;
 }
 
-/** `meta.user` (null when signed out) turns the allowance gate on: a cache hit is always free; anything that costs the model counts. */
+/** Build a walk and stream it as server-sent events: `stage` while it builds, then `walk`, or `error`.
+ * `meta.user` (null when signed out) turns the allowance gate on: a cache hit is always free; anything that costs the model counts. */
 export function streamWalk(body: Record<string, unknown>, meta: { cityId?: string; fromWalkId?: string; user?: User | null; ipKey?: string } = {}): Response {
   const enc = new TextEncoder();
   const stream = new ReadableStream({
