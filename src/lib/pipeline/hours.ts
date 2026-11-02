@@ -1,6 +1,6 @@
 import opening_hours from "opening_hours";
 import type { Route } from "../providers/types";
-import { DWELL_MIN_PER_STOP, PACE_MPS } from "./intent";
+import { dwellMinutes, PACE_MPS } from "./intent";
 
 export type OpenState = "open" | "closed" | "unknown";
 export type HoursCheck = { state: OpenState; note: string };
@@ -55,16 +55,17 @@ export function localAsUtc(when: string): Date {
   return new Date(`${m[1]}T${m[2]}:00Z`);
 }
 
-/** Arrival time at each stop: walking legs scaled for pace, plus a dwell at every previous stop. */
-export function arrivalTimes(startAt: Date, route: Route, stopCount: number, pace: keyof typeof PACE_MPS): Date[] {
+/** Arrival time at each stop: walking legs scaled for pace, plus the time spent at every previous stop (by category, or a number of stops with the default dwell). */
+export function arrivalTimes(startAt: Date, route: Route, stops: number | { category?: string }[], pace: keyof typeof PACE_MPS): Date[] {
   const scale = PACE_MPS.normal / PACE_MPS[pace];
+  const list = typeof stops === "number" ? Array.from({ length: stops }, () => ({} as { category?: string })) : stops;
   let t = startAt.getTime();
   const out: Date[] = [];
-  for (let i = 0; i < stopCount; i++) {
+  for (let i = 0; i < list.length; i++) {
     const leg = route.legs[i]?.durationS ?? 0;
     t += leg * scale * 1000;
     out.push(new Date(t));
-    t += DWELL_MIN_PER_STOP * 60_000;
+    t += dwellMinutes(list[i].category) * 60_000;
   }
   return out;
 }

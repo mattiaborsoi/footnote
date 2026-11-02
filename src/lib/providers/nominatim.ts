@@ -1,11 +1,12 @@
 import type { LatLng } from "../geo";
 import { cached, throttled, USER_AGENT } from "./cache";
 import type { BBox, Geocoder, GeocodeResult } from "./types";
+import { areaKind } from "./types";
 
 const BASE = process.env.NOMINATIM_URL ?? "https://nominatim.openstreetmap.org";
 
-/** Public Nominatim: at most one request per second, identified by User-Agent. Dev only; swap before going public. */
-type Row = { lat: string; lon: string; display_name: string; boundingbox?: [string, string, string, string]; osm_type?: string; osm_id?: number; address?: Record<string, string> };
+/** Public Nominatim: at most one request per second, identified by User-Agent. Exact matches only; photon.ts catches the typos. */
+type Row = { lat: string; lon: string; display_name: string; boundingbox?: [string, string, string, string]; osm_type?: string; osm_id?: number; address?: Record<string, string>; addresstype?: string; category?: string };
 
 function toResult(r: Row | undefined): GeocodeResult | null {
   if (!r) return null;
@@ -15,6 +16,7 @@ function toResult(r: Row | undefined): GeocodeResult | null {
     bbox: b ? { south: Number(b[0]), north: Number(b[1]), west: Number(b[2]), east: Number(b[3]) } : undefined,
     osmId: r.osm_type && r.osm_id ? `osm:${r.osm_type}/${r.osm_id}` : undefined,
     city: r.address?.city ?? r.address?.town ?? r.address?.village ?? undefined,
+    kind: areaKind(r.addresstype) || r.category === "boundary" ? "area" : "place",
   };
 }
 

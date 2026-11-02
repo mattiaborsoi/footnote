@@ -3,6 +3,7 @@ import { getDb } from "../db";
 import { cities } from "../db/schema";
 import { logEvent } from "../log";
 import { configFromEnv, httpTransport } from "../llm/client";
+import { geocoder } from "../providers/geocoder";
 import { nominatim } from "../providers/nominatim";
 import { overpass } from "../providers/overpass";
 import { osrm } from "../providers/osrm";
@@ -40,7 +41,7 @@ async function runTick(): Promise<void> {
   const llm = { transport: httpTransport(cfg), models: cfg.models };
   if (due.places) {
     const n = await cachePlaces(due.places, overpass).catch((e) => { console.error("cache failed", e); return 0; });
-    const presets = n ? await buildPresets(due.places, { geocoder: nominatim, places: overpass, router: osrm }, llm).catch(() => 0) : 0;
+    const presets = n ? await buildPresets(due.places, { geocoder, places: overpass, router: osrm }, llm).catch(() => 0) : 0;
     logEvent("scheduler.places", { city: due.places.id, places: n, presets });
   }
   if (due.scout) {

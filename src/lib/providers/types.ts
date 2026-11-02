@@ -1,6 +1,10 @@
 import type { LatLng } from "../geo";
 
-export type GeocodeResult = LatLng & { label: string; bbox?: BBox; osmId?: string; city?: string };
+/** `kind` is "area" when the query named a whole city, town or region rather than a spot in it. */
+export type GeocodeResult = LatLng & { label: string; bbox?: BBox; osmId?: string; city?: string; kind?: "area" | "place" };
+
+const AREA_TYPES = new Set(["city", "town", "village", "municipality", "suburb", "county", "state", "region", "province", "country", "island", "borough", "quarter", "neighbourhood", "city_district", "district"]);
+export const areaKind = (type: string | undefined) => !!type && AREA_TYPES.has(type);
 export type BBox = { south: number; west: number; north: number; east: number };
 
 export interface Geocoder {
@@ -22,7 +26,7 @@ export type Candidate = LatLng & {
 };
 
 export interface PlacesProvider {
-  search(bbox: { south: number; west: number; north: number; east: number }, selectors: string[], language?: string): Promise<Candidate[]>;
+  search(bbox: { south: number; west: number; north: number; east: number }, selectors: string[], language?: string, opts?: { timeoutS?: number }): Promise<Candidate[]>;
 }
 
 export type Route = {

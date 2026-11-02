@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { categoryOf } from "@/lib/providers/overpass";
+import { matchesInterest } from "@/lib/scout/places";
 import { dedupe, orderAlong, score } from "@/lib/pipeline/candidates";
 import type { Candidate } from "@/lib/providers/types";
 import { CITY } from "../fixtures/city";
@@ -33,5 +35,22 @@ describe("rank and orderAlong", () => {
     const out = orderAlong(stops, CITY.abbey, null);
     expect(out).toHaveLength(3);
     expect(new Set(out.map((s) => s.id)).size).toBe(3);
+  });
+});
+
+describe("categoryOf", () => {
+  it("knows technology and gaming places", () => {
+    expect(categoryOf({ shop: "electronics" })).toBe("tech");
+    expect(categoryOf({ amenity: "hackerspace" })).toBe("tech");
+    expect(categoryOf({ tourism: "museum", museum: "science" })).toBe("museum");
+    expect(categoryOf({ leisure: "amusement_arcade" })).toBe("games");
+    expect(categoryOf({ shop: "video_games" })).toBe("games");
+    expect(categoryOf({ shop: "bakery" })).toBe("shop");
+  });
+  it("matchesInterest keeps only science museums for technology", () => {
+    expect(matchesInterest("technology", { category: "museum", tags: { museum: "science" } })).toBe(true);
+    expect(matchesInterest("technology", { category: "museum", tags: { museum: "art" } })).toBe(false);
+    expect(matchesInterest("technology", { category: "tech", tags: {} })).toBe(true);
+    expect(matchesInterest("museums", { category: "museum", tags: { museum: "art" } })).toBe(true);
   });
 });
