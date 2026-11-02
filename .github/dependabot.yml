@@ -26,6 +26,12 @@ updates:
       # Node majors are moved by hand to the next LTS; odd versions are not LTS.
       - dependency-name: node
         update-types: ["version-update:semver-major"]
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "chore(deps)"
   - package-ecosystem: github-actions
     directory: /
     schedule:

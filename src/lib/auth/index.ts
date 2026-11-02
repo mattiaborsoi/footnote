@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, isNull } from "drizzle-orm";
+import { and, desc, eq, gt, isNull, lt, sql } from "drizzle-orm";
 import { getDb } from "../db";
 import { loginCodes, users } from "../db/schema";
 import { newId } from "../ids";
@@ -45,12 +45,15 @@ export async function verifyCode(raw: string, code: string): Promise<SignedIn | 
   const db = getDb();
   if (!key || !db) return { ok: false, error: "Sign-in is not available.", status: 400 };
   if (!allow(`verify:${key}`, 12, 15 * 60_000)) return { ok: false, error: "Too many attempts. Ask for a new code.", status: 429 };
-  const row = await db.query.loginCodes.findFirst({ where: and(eq(loginCodes.emailKey, key), isNull(loginCodes.usedAt), gt(loginCodes.expiresAt, new Date())), orderBy: desc(loginCodes.createdAt) });
-  if (!row) return { ok: false, error: "That code has expired. Ask for a new one.", status: 400 };
-  if (row.attempts >= MAX_ATTEMPTS) return { ok: false, error: "Too many attempts. Ask for a new code.", status: 400 };
-  if (!sameHash(row.codeHash, hashSecret(code.replace(/\D/g, "")))) {
-    await db.update(loginCodes).set({ attempts: row.attempts + 1 }).where(eq(loginCodes.id, row.id));
-    return { ok: false, error: "That code is not right.", status: 400 };
+  // The latest few unspent codes: a stranger asking for a code must not cancel the one the real person is typing.
+  const rows = await db.query.loginCodes.findMany({ where: and(eq(loginCodes.emailKey, key), isNull(loginCodes.usedAt), gt(loginCodes.expiresAt, new Date())), orderBy: desc(loginCodes.createdAt), limit: 3 });
+  if (!rows.length) return { ok: false, error: "That code has expired. Ask for a new one.", status: 400 };
+  const given = hashSecret(code.replace(/\D/g, ""));
+  const row = rows.find((r) => r.attempts < MAX_ATTEMPTS && sameHash(r.codeHash, given));
+  if (!row) {
+    // one more attempt on each live code, counted in the database so parallel guesses cannot exceed the cap
+    await db.update(loginCodes).set({ attempts: sql`${loginCodes.attempts} + 1` }).where(and(eq(loginCodes.emailKey, key), isNull(loginCodes.usedAt), lt(loginCodes.attempts, MAX_ATTEMPTS)));
+    return { ok: false, error: rows.every((r) => r.attempts + 1 >= MAX_ATTEMPTS) ? "Too many attempts. Ask for a new code." : "That code is not right.", status: 400 };
   }
   await db.update(loginCodes).set({ usedAt: new Date() }).where(eq(loginCodes.id, row.id));
   return { ok: true, user: await upsertUser(row.email, key), next: row.next };

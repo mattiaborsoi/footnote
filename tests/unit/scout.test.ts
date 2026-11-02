@@ -14,13 +14,13 @@ describe("normaliseName", () => {
 
 it("aggregate merges the same place across pages and counts mentions", () => {
   const a = aggregate([
-    { name: "The Circus", category: "architecture", reason: "r1", source: { title: "A", url: "u1" } },
-    { name: "Circus", category: "architecture", reason: "r2", source: { title: "B", url: "u2" } },
-    { name: "Circus", category: "architecture", reason: "r3", source: { title: "B", url: "u2" } },
-    { name: "Pump Room", category: "cafe", reason: "r4", source: { title: "A", url: "u1" } },
+    { name: "The Circus", category: "architecture", reason: "r1", source: { title: "A", url: "https://example.com/u1" } },
+    { name: "Circus", category: "architecture", reason: "r2", source: { title: "B", url: "https://example.com/u2" } },
+    { name: "Circus", category: "architecture", reason: "r3", source: { title: "B", url: "https://example.com/u2" } },
+    { name: "Pump Room", category: "cafe", reason: "r4", source: { title: "A", url: "https://example.com/u1" } },
   ]);
   expect(a[0]).toMatchObject({ name: "The Circus", mentions: 3, reason: "r1" });
-  expect(a[0].sources.map((s) => s.url)).toEqual(["u1", "u2"]);
+  expect(a[0].sources.map((s) => s.url)).toEqual(["https://example.com/u1", "https://example.com/u2"]);
   expect(a[1].name).toBe("Pump Room");
 });
 
@@ -35,7 +35,7 @@ it("htmlToText keeps words and drops chrome", () => {
 });
 
 describe("spots into candidates", () => {
-  const spot = { id: 7, name: "Colonna", category: "cafe", lat: CITY.circus.lat, lon: CITY.circus.lon, osmId: "osm:node/1", reason: "best filter coffee", sources: [{ title: "A coffee blog", url: "u" }], mentions: 2 };
+  const spot = { id: 7, name: "Colonna", category: "cafe", lat: CITY.circus.lat, lon: CITY.circus.lon, osmId: "osm:node/1", reason: "best filter coffee", sources: [{ title: "A coffee blog", url: "https://example.com/coffee" }], mentions: 2 };
   it("credits the source as a fact and boosts the score", () => {
     const c = spotToCandidate(spot);
     expect(c.id).toBe("osm:node/1");

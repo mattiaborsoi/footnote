@@ -12,6 +12,14 @@ import { fingerprint } from "./fingerprint";
 import { planWalk } from "./plan";
 
 /** Build a walk and stream it as server-sent events: `stage` while it builds, then `walk`, or `error`. */
+const STORED_KEYS = ["start", "end", "minutes", "companions", "pace", "interests", "when", "notes", "language"] as const;
+/** What a walk remembers of its request: the known fields only, so a stranger's extra keys never reach the database or a later tailor. */
+export function storedRequest(body: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const k of STORED_KEYS) if (body[k] !== undefined) out[k] = typeof body[k] === "string" ? (body[k] as string).slice(0, 500) : body[k];
+  return out;
+}
+
 /** `meta.user` (null when signed out) turns the allowance gate on: a cache hit is always free; anything that costs the model counts. */
 export function streamWalk(body: Record<string, unknown>, meta: { cityId?: string; fromWalkId?: string; user?: User | null; ipKey?: string } = {}): Response {
   const enc = new TextEncoder();
@@ -44,7 +52,7 @@ export function streamWalk(body: Record<string, unknown>, meta: { cityId?: strin
         }
         const cfg = configFromEnv();
         const walk = await planWalk(body, { geocoder: nominatim, places: overpass, router: osrm }, { transport: httpTransport(cfg), models: cfg.models }, (e) => send("stage", e));
-        const id = await saveWalk(walk, body, sessionId, { cityId: meta.cityId, fingerprint: fp, userId: meta.user?.id }).catch((err) => { console.error("walk not stored", err); return null; });
+        const id = await saveWalk(walk, storedRequest(body), sessionId, { cityId: meta.cityId, fingerprint: fp, userId: meta.user?.id }).catch((err) => { console.error("walk not stored", err); return null; });
         logEvent("walk.served", { stops: walk.stops.length, totalMinutes: walk.totalMinutes, ms: Math.round(performance.now() - started), fromWalkId: meta.fromWalkId ?? null }, { walkId: id, sessionId });
         send("walk", { id, url: id ? `/w/${id}` : null, ...walk });
       } catch (e) {

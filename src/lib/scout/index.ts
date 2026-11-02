@@ -26,7 +26,7 @@ const Extracted = z.object({
   spots: z.array(z.object({
     name: z.string().min(2).max(80),
     category: z.enum(CATEGORIES),
-    reason: z.string().min(5).max(160),
+    reason: z.string().min(5).max(160).transform((r) => r.replace(/https?:\/\/\S+/g, "").replace(/\s+/g, " ").trim()),
   })).max(12),
 });
 

@@ -33,6 +33,7 @@ export function configFromEnv(env: Record<string, string | undefined> = process.
 export function httpTransport(cfg: LlmConfig): Transport {
   return async ({ model, messages, maxTokens }) => {
     const res = await fetch(`${cfg.baseUrl}/chat/completions`, {
+      signal: AbortSignal.timeout(90_000),
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${cfg.apiKey}` },
       body: JSON.stringify({ model, messages, max_tokens: maxTokens, temperature: 0.4 }),

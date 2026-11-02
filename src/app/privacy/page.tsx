@@ -16,13 +16,13 @@ export default function PrivacyPage() {
         <li><strong>Your requests and walks.</strong> The place, time, company and interests you give us, and the walk we build, stored under the walk&apos;s link. A walk you do not keep is deleted after 30 days; the optional free-text line after 90. Walk links are not listed anywhere and carry a no-index mark.</li>
         <li><strong>Product events.</strong> What was asked, how long each step took, what was tapped and any error, with an id your browser made up, for 90 days. No advertising, no trackers, no analytics cookie.</li>
         <li><strong>Your email</strong>, when you sign in, with the walks you keep and your pass. Sign-in codes expire after 15 minutes.</li>
-        <li><strong>Feedback</strong> you send through the bug button, with the screen and walk it was about, for a year.</li>
+        <li><strong>Feedback</strong> you send through the bug button, with the screen and walk it was about, the size of your screen, and the contact address if you gave one, for a year. Each report is also emailed to us.</li>
         <li><strong>Payments</strong> are handled by Stripe; we store a customer reference and the state of your pass, never card details.</li>
       </ul>
       <h2 className="font-serif text-[22px]">Cookies</h2>
       <p>One, only after you sign in, and only to keep you signed in. Nothing else is set.</p>
       <h2 className="font-serif text-[22px]">Who else sees data</h2>
-      <p>Map, geocoding, routing and weather services receive the coordinates needed to answer; the model provider receives your request and the candidate places, never your email. Stripe receives what a payment needs.</p>
+      <p>Map, geocoding, routing and weather services receive the coordinates needed to answer; the model provider receives your request and the candidate places, never your email. Stripe receives what a payment needs. The site runs on a DigitalOcean server behind Cloudflare, which see the traffic and your address as any host does, and sign-in emails go through our mail provider. Server logs are kept for a few weeks and then overwritten.</p>
       <h2 className="font-serif text-[22px]">Your rights</h2>
       <p>Under UK GDPR you can ask for a copy of what we hold about you, or for it to be deleted. Write to us through the feedback button and we will answer within a month.</p>
       <p className="flex gap-4"><Link className="underline" href="/terms">Terms</Link><Link className="underline" href="/">Home</Link></p>

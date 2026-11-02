@@ -1,6 +1,12 @@
 /** Runs once when the server starts: apply migrations, then prune on a daily timer. */
 export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
+  if (process.env.NODE_ENV === "production") {
+    for (const name of ["AUTH_SECRET", "ADMIN_TOKEN"]) {
+      const v = process.env[name] ?? "";
+      if (v.length < 24 || /change-me|example/i.test(v)) throw new Error(`${name} is missing or still the example value; refusing to start`);
+    }
+  }
   const { migrateDb, startPruning } = await import("./lib/db/lifecycle");
   const { startScheduler } = await import("./lib/scout/scheduler");
   try {

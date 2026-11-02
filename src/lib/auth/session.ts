@@ -22,7 +22,7 @@ export async function createSession(userId: string): Promise<string> {
 export async function setSessionCookie(token: string | null): Promise<void> {
   const jar = await cookies();
   if (!token) { jar.delete(COOKIE); return; }
-  jar.set(COOKIE, token, { httpOnly: true, sameSite: "lax", secure: (process.env.APP_URL ?? "").startsWith("https"), path: "/", maxAge: TTL_MS / 1000 });
+  jar.set(COOKIE, token, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production" || (process.env.APP_URL ?? "").startsWith("https"), path: "/", maxAge: TTL_MS / 1000 });
 }
 
 /** Who is signed in, from the cookie, or null. */

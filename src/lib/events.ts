@@ -15,5 +15,5 @@ export const Feedback = z.object({
   walkId: z.string().regex(/^[a-z0-9]{6,16}$/).optional(),
   sessionId: z.string().regex(/^[A-Za-z0-9_-]{8,64}$/).optional(),
   contact: z.string().trim().max(120).optional(),
-  context: z.record(z.string(), z.union([z.string().max(500), z.number(), z.boolean()])).default({}),
+  context: z.record(z.string().max(40), z.union([z.string().max(500), z.number(), z.boolean()])).default({}).refine((c) => Object.keys(c).length <= 12, { message: "too much context" }),
 });

@@ -1,10 +1,15 @@
 # One site, automatic certificates, the app behind it. SITE_HOST comes from .env.
+# Behind Cloudflare's proxy: the cloud firewall admits 80 and 443 from Cloudflare's ranges only, so CF-Connecting-IP is trustworthy.
 {$SITE_HOST} {
 	encode zstd gzip
+	request_body {
+		max_size 64KB
+	}
 	reverse_proxy app:3000
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
 		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
 		Referrer-Policy strict-origin-when-cross-origin
 		Permissions-Policy "geolocation=(self), camera=(), microphone=(), payment=()"
 		-Server
