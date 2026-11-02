@@ -9,7 +9,7 @@ mode="${1:-}"; msg="${2:-We are doing some work on Footnote. Back soon.}"
 dir="${PROD_DIR:-/opt/footnote}"
 json=$(printf '{"message": %s, "since": "%s"}' "$(printf %s "$msg" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))' 2>/dev/null || printf '"%s"' "$msg")" "$(date -u +%Y-%m-%dT%H:%M:%SZ)")
 if [ -n "${PROD_SSH:-}" ]; then
-  if [ "$mode" = on ]; then ssh "$PROD_SSH" "mkdir -p '$dir/data/app' && printf '%s' '$json' > '$dir/data/app/maintenance.json'"; else ssh "$PROD_SSH" "rm -f '$dir/data/app/maintenance.json'"; fi
+  if [ "$mode" = on ]; then printf '%s' "$json" | ssh "$PROD_SSH" "mkdir -p '$dir/data/app' && cat > '$dir/data/app/maintenance.json'"; else ssh "$PROD_SSH" "rm -f '$dir/data/app/maintenance.json'"; fi
 else
   cd "$(dirname "$0")/.."; mkdir -p data
   if [ "$mode" = on ]; then printf '%s' "$json" > data/maintenance.json; else rm -f data/maintenance.json; fi

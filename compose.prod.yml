@@ -22,12 +22,43 @@ services:
 
   app:
     image: ${APP_IMAGE}
-    env_file: .env
+    # An explicit list: the app never sees the provider key, the LiteLLM master key or the other containers' secrets.
     environment:
       DATABASE_URL: postgres://footnote:${POSTGRES_PASSWORD}@db:5432/footnote
       LLM_BASE_URL: http://litellm:4000/v1
+      LLM_API_KEY: ${LLM_API_KEY}
+      LLM_MODEL_INTERPRET: ${LLM_MODEL_INTERPRET:-haiku}
+      LLM_MODEL_CURATE: ${LLM_MODEL_CURATE:-opus}
       SEARXNG_URL: http://searxng:8080
+      APP_URL: ${APP_URL}
+      SCHEDULER: ${SCHEDULER:-on}
+      AUTH_SECRET: ${AUTH_SECRET}
+      ADMIN_TOKEN: ${ADMIN_TOKEN}
       ADMIN_UI: "off"
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      MAIL_FROM: ${MAIL_FROM}
+      FEEDBACK_TO: ${FEEDBACK_TO}
+      THROWAWAY_DOMAINS: ${THROWAWAY_DOMAINS}
+      TRIAL_WALKS: ${TRIAL_WALKS:-2}
+      PLAN_WEEK_WALKS: ${PLAN_WEEK_WALKS:-70}
+      WEEK_PASS_DAILY_FAIR_USE: ${WEEK_PASS_DAILY_FAIR_USE:-10}
+      PLAN_MONTH_WALKS: ${PLAN_MONTH_WALKS:-25}
+      PLAN_WEEK_PRICE: ${PLAN_WEEK_PRICE}
+      PLAN_MONTH_PRICE: ${PLAN_MONTH_PRICE}
+      WALK_COST_LABEL: ${WALK_COST_LABEL}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
+      STRIPE_PRICE_WEEK: ${STRIPE_PRICE_WEEK}
+      STRIPE_PRICE_MONTH: ${STRIPE_PRICE_MONTH}
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
     volumes:
       - ./data/app:/app/data
     depends_on:
@@ -43,6 +74,11 @@ services:
       POSTGRES_USER: footnote
       POSTGRES_DB: footnote
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     volumes:
       - ./data/postgres:/var/lib/postgresql/data
       - ./deploy/db-init.sql:/docker-entrypoint-initdb.d/10-litellm.sql:ro

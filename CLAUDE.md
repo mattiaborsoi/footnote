@@ -71,7 +71,7 @@ One DigitalOcean Droplet (London, 2 GB, Docker image, weekly backups, firewall o
 
 ## Architecture (current)
 
-- `src/app/` — Next.js App Router; `api/health` for checks; `api/walk/demo` builds a walk from query parameters without a model.
+- `src/app/` — Next.js App Router; `api/health` for checks;  builds a walk from query parameters without a model.
 - `src/lib/geo.ts` — distances, detour, ordering along an axis or around a centre, search bounding box.
 - `src/lib/db/` — Drizzle schema (`walks`, `events`, `feedback`), client (null without `DATABASE_URL`: the app still plans, nothing is stored), `lifecycle.ts` (migrations from `drizzle/` at server start via `src/instrumentation.ts`; daily pruning: events 90 days, the request's free text 90 days, feedback a year). `pnpm db:generate` writes a migration after a schema change; commit it.
 - `src/lib/walks.ts` + `src/app/w/[id]` + `src/app/api/walk/[id]` — every built walk is stored under a short id and served as a page and as JSON. `src/app/api/events` (client beacons, validated, no cookies) and `src/app/api/feedback` (the button; email notification once the mail provider exists). `src/lib/log.ts` writes every product event to stdout and to the events table.
@@ -145,6 +145,8 @@ To decide (business): two free walks instead of one, one at home and one on the 
 **Done when.** For ten capitals, a ninety-minute history-and-cafés walk picks at least five stops, every stop carries a recommendation from a named source, the dashboard shows coverage per capital, and the cost per walk is unchanged.
 
 - 2026-11-02 — After the second review: two free walks (one at home, one on the trip); the week pass holds as many walks as a week holds at fair use, ten a day (hard ceiling 70), the monthly plan stays "up to N"; a walk over two hours counts as two, since cost scales with stops.
+
+- 2026-11-02 — Security review (independent model) applied: the real client address comes from Cloudflare's header and the origin firewall admits only Cloudflare; the scout trigger exists only where the dashboard does; no model-free demo route; every public route that costs something has a per-connection ceiling; the provider queue refuses when deep instead of growing; request bodies are capped and only the known fields are stored; the free-text line is shown again only to its author; the app container gets an explicit list of variables, never the provider key; web notes are quoted to the curator as data; page reads stay on the public web; production refuses example secrets at start.
 
 ## Status
 
