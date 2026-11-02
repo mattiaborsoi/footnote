@@ -72,7 +72,9 @@ export async function planWalk(raw: unknown, p: Providers, llm: Llm, emit: (e: S
   const found = mergeScouted(mapped, scouted);
   let startNote: string | undefined;
   if (wholeArea && !end) {
-    const core = densestPoint(found.filter((c) => intent.interests.some((i) => matchesInterest(i, c))));
+    // Where the places for these interests cluster; when there are too few of those to say, where places cluster at all.
+    const matching = found.filter((c) => intent.interests.some((i) => matchesInterest(i, c)));
+    const core = densestPoint(matching.length >= 3 ? matching : found);
     if (core && distanceM(core, start) > 300) {
       const place = found0.city ?? found0.label.split(",")[0];
       start = { ...found0, lat: core.lat, lon: core.lon, label: `Central ${place}` };

@@ -44,8 +44,14 @@ export async function cachePlaces(city: { id: string; lat: number; lon: number; 
   if (!db) return 0;
   const box = clampBbox(city, city);
   const byId = new Map<string, Candidate>();
+  // A dense city can time out one interest's fetch; that is retried once with a longer limit, and a second failure
+  // aborts the refresh so the previous cache stays whole (a cache with holes would be served as the truth for a week).
   for (const interest of Interest.options) {
-    const found = await provider.search(box, SELECTORS[interest]).catch(() => [] as Candidate[]);
+    const found = await provider.search(box, SELECTORS[interest], "en", { timeoutS: 60 }).catch(async (err: unknown) => {
+      logEvent("cache.retry", { city: city.id, interest, error: String(err).slice(0, 120) });
+      await new Promise((r) => setTimeout(r, 15_000));
+      return provider.search(box, SELECTORS[interest], "en", { timeoutS: 120 });
+    });
     for (const c of found) byId.set(c.id, c);
   }
   const rows = [...byId.values()].map((c) => ({ id: c.id, cityId: city.id, name: c.name, category: c.category, lat: c.lat, lon: c.lon, tags: c.tags, facts: c.facts }));

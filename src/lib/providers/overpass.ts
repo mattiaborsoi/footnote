@@ -21,9 +21,9 @@ export function factsFromTags(t: Record<string, string>): string[] {
 }
 
 export const overpass: PlacesProvider = {
-  async search(bbox, selectors, language = "en"): Promise<Candidate[]> {
+  async search(bbox, selectors, language = "en", opts = {}): Promise<Candidate[]> {
     const b = `${bbox.south},${bbox.west},${bbox.north},${bbox.east}`;
-    const body = `[out:json][timeout:25];(${selectors.map((s) => `nwr${s}["name"](${b});`).join("")});out center tags;`;
+    const body = `[out:json][timeout:${opts.timeoutS ?? 25}];(${selectors.map((s) => `nwr${s}["name"](${b});`).join("")});out center tags;`;
     return cached(`ovp:${body}`, 3600_000, () =>
       throttled("overpass", 1000, async () => {
         const res = await fetch(BASE, { method: "POST", headers: { "User-Agent": USER_AGENT }, body: `data=${encodeURIComponent(body)}` });
