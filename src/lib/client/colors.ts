@@ -8,6 +8,8 @@ export const CATEGORY_COLOR: Record<string, string> = {
   architecture: "#1e3a8a",
   memorial: "#6b7280",
   shop: "#9d174d",
+  tech: "#0f766e",
+  games: "#c2410c",
   place: "#475569",
 };
 export const colorFor = (category: string) => CATEGORY_COLOR[category] ?? "#1e3a8a";

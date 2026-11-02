@@ -4,7 +4,7 @@ import type { User } from "../auth";
 import { allow } from "../ratelimit";
 import { configFromEnv, httpTransport, LlmError } from "../llm/client";
 import { logEvent } from "../log";
-import { nominatim } from "../providers/nominatim";
+import { geocoder } from "../providers/geocoder";
 import { overpass } from "../providers/overpass";
 import { osrm } from "../providers/osrm";
 import { findRecent, saveWalk } from "../walks";
@@ -51,7 +51,7 @@ export function streamWalk(body: Record<string, unknown>, meta: { cityId?: strin
           }
         }
         const cfg = configFromEnv();
-        const walk = await planWalk(body, { geocoder: nominatim, places: overpass, router: osrm }, { transport: httpTransport(cfg), models: cfg.models }, (e) => send("stage", e));
+        const walk = await planWalk(body, { geocoder, places: overpass, router: osrm }, { transport: httpTransport(cfg), models: cfg.models }, (e) => send("stage", e));
         const id = await saveWalk(walk, storedRequest(body), sessionId, { cityId: meta.cityId, fingerprint: fp, userId: meta.user?.id }).catch((err) => { console.error("walk not stored", err); return null; });
         logEvent("walk.served", { stops: walk.stops.length, totalMinutes: walk.totalMinutes, ms: Math.round(performance.now() - started), fromWalkId: meta.fromWalkId ?? null }, { walkId: id, sessionId });
         send("walk", { id, url: id ? `/w/${id}` : null, ...walk });
