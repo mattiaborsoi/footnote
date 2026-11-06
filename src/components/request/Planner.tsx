@@ -91,11 +91,12 @@ export default function Planner({ initial, tailorOf }: { initial?: Partial<FormS
   return (
     <div className="flex min-h-dvh flex-col-reverse justify-end md:flex-row md:justify-start">
       <section className="flex flex-col gap-6 px-6 py-8 md:w-[520px] md:flex-none md:overflow-y-auto md:px-10 md:py-10 lg:w-[600px]">
-        <header className="flex items-center justify-between">
+        <header className="flex items-center justify-between gap-3">
           <Logo />
-          <div className="flex items-center gap-2">
+          {/* Three things on one line at 375 px: the chips never wrap, so the wordmark's superscript stays clear. */}
+          <div className="flex shrink-0 items-center gap-1.5">
           <AccountChip />
-          {tailorOf ? <span className="text-[13px] text-muted">Tailoring a ready-made walk</span> : <Link href="/around" className="flex min-h-10 items-center gap-2 rounded-full border-2 border-line px-3 text-[14px] font-semibold text-ink"><Icon.locate width={16} height={16} />Around me</Link>}
+          {tailorOf ? <span className="text-[13px] text-muted">Tailoring a ready-made walk</span> : <Link href="/around" className="flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-full border-2 border-line px-3 text-[13px] font-semibold text-ink sm:text-[14px]"><Icon.locate width={16} height={16} />Around me</Link>}
           </div>
         </header>
         {limit ? (
