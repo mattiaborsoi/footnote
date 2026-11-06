@@ -12,6 +12,6 @@ export default function AccountChip() {
   return user ? (
     <Link href="/account" className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-line font-semibold uppercase text-ink" aria-label="Your account" title={user.email}>{user.email.slice(0, 1)}</Link>
   ) : (
-    <Link href="/signin" className="flex min-h-11 items-center rounded-full border-2 border-line px-4 text-[14px] font-semibold text-ink">Sign in</Link>
+    <Link href="/signin" className="flex min-h-11 items-center whitespace-nowrap rounded-full border-2 border-line px-3 text-[13px] font-semibold text-ink sm:text-[14px]">Sign in</Link>
   );
 }
